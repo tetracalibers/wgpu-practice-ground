@@ -30,7 +30,7 @@ impl<'w> State<'w> {
 
     // Surface
     // - 描画先
-    let surface = instance.create_surface(window.clone()).unwrap();
+    let surface = instance.create_surface(Arc::clone(&window)).unwrap();
 
     // Adapter:
     // - OSのネイティブグラフィックスAPIからWebGPUへの変換レイヤー
