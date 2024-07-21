@@ -2,8 +2,9 @@ use std::error::Error;
 
 use winit::{
   application::ApplicationHandler,
-  event::WindowEvent,
+  event::{ElementState, KeyEvent, WindowEvent},
   event_loop::{ActiveEventLoop, EventLoop},
+  keyboard::{KeyCode, PhysicalKey},
   window::{Window, WindowId},
 };
 
@@ -43,6 +44,17 @@ impl ApplicationHandler for Application {
   ) {
     match event {
       WindowEvent::CloseRequested => {
+        event_loop.exit();
+      }
+      WindowEvent::KeyboardInput {
+        event:
+          KeyEvent {
+            physical_key: PhysicalKey::Code(KeyCode::Escape),
+            state: ElementState::Pressed,
+            ..
+          },
+        ..
+      } => {
         event_loop.exit();
       }
       _ => {}
