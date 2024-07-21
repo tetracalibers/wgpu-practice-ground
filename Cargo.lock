@@ -3,5 +3,9 @@
 version = 3
 
 [[package]]
+name = "ch01-window"
+version = "0.1.0"
+
+[[package]]
 name = "wgpu-practice-ground"
 version = "0.1.0"

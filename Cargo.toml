@@ -1,6 +1,10 @@
 [package]
-name = "wgpu-practice-ground"
+name    = "wgpu-practice-ground"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+[workspace]
+
+members = ["tutorial/ch01-window"]
