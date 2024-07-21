@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use winit::{
   application::ApplicationHandler,
@@ -12,7 +12,7 @@ use crate::state::State;
 
 #[derive(Default)]
 pub struct Application<'w> {
-  state: Option<State<'w>>,
+  windows: HashMap<WindowId, State<'w>>,
 }
 
 impl<'w> ApplicationHandler for Application<'w> {
@@ -26,15 +26,22 @@ impl<'w> ApplicationHandler for Application<'w> {
 
     let state =
       pollster::block_on(async { State::new(Arc::new(window)).await });
-    self.state = Some(state);
+
+    let window_id = state.window().id();
+    self.windows.insert(window_id, state);
   }
 
   fn window_event(
     &mut self,
     event_loop: &ActiveEventLoop,
-    _window_id: WindowId,
+    window_id: WindowId,
     event: WindowEvent,
   ) {
+    let window_state = match self.windows.get_mut(&window_id) {
+      Some(state) => state,
+      None => return,
+    };
+
     match event {
       WindowEvent::CloseRequested => {
         event_loop.exit();
@@ -51,9 +58,7 @@ impl<'w> ApplicationHandler for Application<'w> {
         event_loop.exit();
       }
       WindowEvent::Resized(physical_size) => {
-        if let Some(ref mut state) = self.state {
-          state.resize(physical_size);
-        }
+        window_state.resize(physical_size);
       }
       _ => {}
     }
