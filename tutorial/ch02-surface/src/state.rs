@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use wgpu::{
   Backends, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor,
   Limits, PowerPreference, PresentMode, Queue, RequestAdapterOptions, Surface,
@@ -5,17 +7,17 @@ use wgpu::{
 };
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
 
-struct State<'window> {
+pub struct State<'window> {
   surface: Surface<'window>,
   device: Device,
   queue: Queue,
   config: SurfaceConfiguration,
   size: PhysicalSize<u32>,
-  window: &'window Window,
+  window: Arc<Window>,
 }
 
 impl<'w> State<'w> {
-  async fn new(window: &'w Window) -> Self {
+  pub async fn new(window: Arc<Window>) -> Self {
     // wgpuのアプリケーションはinstanceという構造体と紐付けられる
     let instance = Instance::new(InstanceDescriptor {
       // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
@@ -26,7 +28,7 @@ impl<'w> State<'w> {
 
     // Surface
     // - 描画先
-    let surface = instance.create_surface(window).unwrap();
+    let surface = instance.create_surface(window.clone()).unwrap();
 
     // Adapter:
     // - OSのネイティブグラフィックスAPIからWebGPUへの変換レイヤー
