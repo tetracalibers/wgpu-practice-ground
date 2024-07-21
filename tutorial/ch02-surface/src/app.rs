@@ -50,6 +50,11 @@ impl<'w> ApplicationHandler for Application<'w> {
       } => {
         event_loop.exit();
       }
+      WindowEvent::Resized(physical_size) => {
+        if let Some(ref mut state) = self.state {
+          state.resize(physical_size);
+        }
+      }
       _ => {}
     }
   }
