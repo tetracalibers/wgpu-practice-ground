@@ -139,7 +139,7 @@ impl<'w> State<'w> {
   }
 
   fn update(&mut self) {
-    todo!()
+    unimplemented!("We don't have anything to update yet")
   }
 
   fn render(&mut self) -> Result<(), SurfaceError> {
