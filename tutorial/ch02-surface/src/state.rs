@@ -17,7 +17,9 @@ pub struct State<'window> {
 }
 
 impl<'w> State<'w> {
-  pub async fn new(window: Arc<Window>) -> Self {
+  pub async fn new(window: Window) -> Self {
+    let window = Arc::new(window);
+
     // wgpuのアプリケーションはinstanceという構造体と紐付けられる
     let instance = Instance::new(InstanceDescriptor {
       // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU

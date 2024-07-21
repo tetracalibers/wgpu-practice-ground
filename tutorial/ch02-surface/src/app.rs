@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use winit::{
   application::ApplicationHandler,
@@ -24,8 +24,7 @@ impl<'w> ApplicationHandler for Application<'w> {
       .create_window(window_attributes)
       .expect("Failed to create window");
 
-    let state =
-      pollster::block_on(async { State::new(Arc::new(window)).await });
+    let state = pollster::block_on(async { State::new(window).await });
 
     let window_id = state.window().id();
     self.windows.insert(window_id, state);
