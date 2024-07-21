@@ -116,7 +116,7 @@ impl<'w> State<'w> {
   }
 
   pub fn window(&self) -> &Window {
-    todo!()
+    &self.window
   }
 
   fn resize(&mut self, new_size: PhysicalSize<u32>) {
