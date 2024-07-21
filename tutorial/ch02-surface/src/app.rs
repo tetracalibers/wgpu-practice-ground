@@ -41,6 +41,10 @@ impl<'w> ApplicationHandler for Application<'w> {
       None => return,
     };
 
+    if window_state.input(&event) {
+      return;
+    }
+
     match event {
       WindowEvent::CloseRequested => {
         event_loop.exit();

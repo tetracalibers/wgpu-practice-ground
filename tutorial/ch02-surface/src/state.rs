@@ -131,8 +131,11 @@ impl<'w> State<'w> {
     }
   }
 
-  fn input(&mut self, event: &WindowEvent) -> bool {
-    todo!()
+  // イベントが完全に処理されたかどうかを示すboolを返す
+  // このメソッドがtrueを返した場合、メイン・ループはそれ以上イベントを処理しない
+  pub fn input(&mut self, _event: &WindowEvent) -> bool {
+    // 今は取り込みたいイベントがないので、falseを返すことにする
+    false
   }
 
   fn update(&mut self) {
