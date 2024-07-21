@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use winit::{
-  application::ApplicationHandler, event_loop::ActiveEventLoop, window::Window,
+  application::ApplicationHandler,
+  event::{ElementState, KeyEvent, WindowEvent},
+  event_loop::ActiveEventLoop,
+  keyboard::{KeyCode, PhysicalKey},
+  window::{Window, WindowId},
 };
 
 use crate::state::State;
@@ -28,9 +32,25 @@ impl<'w> ApplicationHandler for Application<'w> {
   fn window_event(
     &mut self,
     event_loop: &ActiveEventLoop,
-    window_id: winit::window::WindowId,
-    event: winit::event::WindowEvent,
+    _window_id: WindowId,
+    event: WindowEvent,
   ) {
-    todo!()
+    match event {
+      WindowEvent::CloseRequested => {
+        event_loop.exit();
+      }
+      WindowEvent::KeyboardInput {
+        event:
+          KeyEvent {
+            physical_key: PhysicalKey::Code(KeyCode::Escape),
+            state: ElementState::Pressed,
+            ..
+          },
+        ..
+      } => {
+        event_loop.exit();
+      }
+      _ => {}
+    }
   }
 }
