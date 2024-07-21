@@ -1981,6 +1981,7 @@ name = "wgpu-practice-ground"
 version = "0.1.0"
 dependencies = [
  "ch01-window",
+ "ch02-surface",
 ]
 
 [[package]]

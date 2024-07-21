@@ -1,14 +1,7 @@
-pub fn add(left: usize, right: usize) -> usize {
-  left + right
-}
+use std::error::Error;
 
-#[cfg(test)]
-mod tests {
-  use super::*;
+pub fn run() -> Result<(), Box<dyn Error>> {
+  env_logger::init();
 
-  #[test]
-  fn it_works() {
-    let result = add(2, 2);
-    assert_eq!(result, 4);
-  }
+  Ok(())
 }
