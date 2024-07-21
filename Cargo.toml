@@ -8,4 +8,4 @@ ch01-window = { path = "./tutorial/ch01-window" }
 
 [workspace]
 
-members = ["tutorial/ch01-window"]
+members = ["tutorial/ch01-window", "tutorial/ch02-surface"]
