@@ -17,6 +17,9 @@ fn main() {
     "tutorial/ch02-surface" => {
       ch02_surface::run().unwrap();
     }
+    "tutorial/ch03-pipeline" => {
+      ch03_pipeline::run().unwrap();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
