@@ -9,4 +9,8 @@ ch02-surface = { path = "./tutorial/ch02-surface" }
 
 [workspace]
 
-members = ["tutorial/ch01-window", "tutorial/ch02-surface"]
+members = [
+  "tutorial/ch01-window",
+  "tutorial/ch02-surface",
+  "tutorial/ch03-pipeline",
+]
