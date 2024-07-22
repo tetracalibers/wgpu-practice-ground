@@ -27,7 +27,7 @@ struct Application {
 impl ApplicationHandler for Application {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
     let window_attributes =
-      Window::default_attributes().with_title("Hello, World!");
+      Window::default_attributes().with_title("Tutorial 01 - Window");
 
     let window = event_loop
       .create_window(window_attributes)
