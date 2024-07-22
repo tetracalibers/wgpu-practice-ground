@@ -3,7 +3,7 @@ struct VertexOutput {
   // builtin(position)
   // - WGPUにこれが頂点のクリップ座標として使いたい値であることを伝える
   // - like: GLSLのgl_Position変数
-  @buildin(position) clip_position: vec4<f32>;
+  @builtin(position) clip_position: vec4<f32>,
 };
 
 // @vertex
@@ -11,7 +11,7 @@ struct VertexOutput {
 @vertex
 fn vs_main(
   // builtin(vertex_index)から値を取得するin_vertex_indexというu32を期待している
-  @buildin(vertex_index) in_vertex_index: u32,
+  @builtin(vertex_index) in_vertex_index: u32,
 ) -> VertexOutput {
   // varで定義された変数は変更できるが、型を指定する必要がある
   var out: VertexOutput;
