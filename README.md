@@ -9,3 +9,7 @@ cargo run -- tutorial/ch01-window
 ```bash
 cargo run -- tutorial/ch02-surface
 ```
+
+```bash
+cargo run -- tutorial/ch03-pipeline
+```

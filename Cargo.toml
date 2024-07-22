@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ch01-window  = { path = "./tutorial/ch01-window" }
-ch02-surface = { path = "./tutorial/ch02-surface" }
+ch01-window   = { path = "./tutorial/ch01-window" }
+ch02-surface  = { path = "./tutorial/ch02-surface" }
+ch03-pipeline = { path = "./tutorial/ch03-pipeline" }
 
 [workspace]
 
