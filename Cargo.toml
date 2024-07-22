@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ch01-window = { path = "./tutorial/ch01-window" }
+ch01-window  = { path = "./tutorial/ch01-window" }
+ch02-surface = { path = "./tutorial/ch02-surface" }
 
 [workspace]
 
-members = ["tutorial/ch01-window"]
+members = ["tutorial/ch01-window", "tutorial/ch02-surface"]

@@ -14,6 +14,9 @@ fn main() {
     "tutorial/ch01-window" => {
       ch01_window::run().unwrap();
     }
+    "tutorial/ch02-surface" => {
+      ch02_surface::run().unwrap();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
