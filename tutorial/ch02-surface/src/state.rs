@@ -176,15 +176,22 @@ impl<'w> State<'w> {
           label: Some("Render Pass"),
           // フラグメントシェーダーの結果の書き込み先として使用するテクスチャビューを指定する
           color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            // どのテクスチャに色を保存するか
             view: &view,
+            // 解決された出力を受け取るテクスチャ
+            // マルチサンプリングが有効になっていない限り、viewと同じになる
             resolve_target: None,
+            // スクリーン上の色(viewによって指定される)をどう扱うか
             ops: wgpu::Operations {
+              // 前のフレームから保存された色をどのように扱うか
               load: wgpu::LoadOp::Clear(wgpu::Color {
                 r: 0.1,
                 g: 0.2,
                 b: 0.3,
                 a: 1.0,
               }),
+              // レンダリング結果をTextureViewの後ろにあるTexture（この場合はSurfaceTexture）に保存するかどうか
+              // レンダリング結果を保存したいので、StoreOp::Storeを使用する
               store: wgpu::StoreOp::Store,
             },
           })],
