@@ -261,34 +261,42 @@ impl<'w> State<'w> {
       // CommandEncoderのbegin_render_passメソッドによって、描画パスRenderPassの構築を開始できる
       // RenderPassには実際の描画のためのすべてのメソッドがある
       // RenderPassが持つ各種のメソッドを呼ぶことで描画のためのコマンドを組み上げる
-      let _render_pass =
+      let mut render_pass =
         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
           label: Some("Render Pass"),
           // フラグメントシェーダーの結果の書き込み先として使用するテクスチャビューを指定する
-          color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            // どのテクスチャに色を保存するか
-            view: &view,
-            // 解決された出力を受け取るテクスチャ
-            // マルチサンプリングが有効になっていない限り、viewと同じになる
-            resolve_target: None,
-            // スクリーン上の色(viewによって指定される)をどう扱うか
-            ops: wgpu::Operations {
-              // 前のフレームから保存された色をどのように扱うか
-              load: wgpu::LoadOp::Clear(wgpu::Color {
-                r: 0.1,
-                g: 0.2,
-                b: 0.3,
-                a: 1.0,
-              }),
-              // レンダリング結果をTextureViewの後ろにあるTexture（この場合はSurfaceTexture）に保存するかどうか
-              // レンダリング結果を保存したいので、StoreOp::Storeを使用する
-              store: wgpu::StoreOp::Store,
-            },
-          })],
+          color_attachments: &[
+            // これはフラグメントシェーダーの@location(0)がターゲットにしているものである
+            Some(wgpu::RenderPassColorAttachment {
+              // どのテクスチャに色を保存するか
+              view: &view,
+              // 解決された出力を受け取るテクスチャ
+              // マルチサンプリングが有効になっていない限り、viewと同じになる
+              resolve_target: None,
+              // スクリーン上の色(viewによって指定される)をどう扱うか
+              ops: wgpu::Operations {
+                // 前のフレームから保存された色をどのように扱うか
+                load: wgpu::LoadOp::Clear(wgpu::Color {
+                  r: 0.1,
+                  g: 0.2,
+                  b: 0.3,
+                  a: 1.0,
+                }),
+                // レンダリング結果をTextureViewの後ろにあるTexture（この場合はSurfaceTexture）に保存するかどうか
+                // レンダリング結果を保存したいので、StoreOp::Storeを使用する
+                store: wgpu::StoreOp::Store,
+              },
+            }),
+          ],
           depth_stencil_attachment: None,
           occlusion_query_set: None,
           timestamp_writes: None,
         });
+
+      render_pass.set_pipeline(&self.render_pipeline);
+      // 3つの頂点と1つのインスタンスで何かを描くようにwgpuに指示する
+      // これが@builtin(vertex_index)の由来である
+      render_pass.draw(0..3, 0..1);
     }
 
     // wgpuにコマンドバッファを終了し、GPUのレンダーキューに送信するように指示する
