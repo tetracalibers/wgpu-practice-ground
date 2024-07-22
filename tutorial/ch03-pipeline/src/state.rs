@@ -15,6 +15,11 @@ pub struct State<'window> {
   config: SurfaceConfiguration,
   size: PhysicalSize<u32>,
   window: Arc<Window>,
+  // Pipeline
+  // - パイプラインは、あるデータセットに対してGPUが実行するすべてのアクションを記述する
+  // - OpenGLでのシェーダープログラムのより堅牢なバージョンと考えることができる
+  // ここでは、特にRenderPipelineを作成する
+  render_pipeline: wgpu::RenderPipeline,
 }
 
 impl<'w> State<'w> {
@@ -108,6 +113,90 @@ impl<'w> State<'w> {
       desired_maximum_frame_latency: 2,
     };
 
+    // シェーダーをロードする
+    // ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+      label: Some("Shader"),
+      source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+    });
+
+    let render_pipeline_layout =
+      device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Render Pipeline Layout"),
+        bind_group_layouts: &[],
+        push_constant_ranges: &[],
+      });
+
+    let render_pipeline =
+      device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Render Pipeline"),
+        layout: Some(&render_pipeline_layout),
+        vertex: wgpu::VertexState {
+          module: &shader,
+          // シェーダー内のどの関数をエントリポイントにするかを指定する
+          // @vertexでマークした関数
+          entry_point: "vs_main",
+          // 頂点シェーダに渡したい頂点の種類を伝える
+          // 今回は頂点シェーダ自体で頂点を指定するので、ここは空にしておく
+          buffers: &[],
+          compilation_options: wgpu::PipelineCompilationOptions::default(),
+        },
+        // fragmentは技術的にはオプションなので、Some()でラップする必要がある
+        // fragmentは色データをサーフェスに保存したい場合に必要になる
+        fragment: Some(wgpu::FragmentState {
+          module: &shader,
+          // シェーダー内のどの関数をエントリポイントにするかを指定する
+          // @fragmentでマークした関数
+          entry_point: "fs_main",
+          // 設定すべきカラー出力を指示する
+          // 配列として複数指定できるが、今回はサーフェス用に1つだけ必要
+          targets: &[Some(wgpu::ColorTargetState {
+            // サーフェスへのコピーが簡単にできるように、サーフェスのフォーマットを使う
+            format: config.format,
+            // 古いピクセルデータを新しいデータに置き換えるだけでいいと指定
+            blend: Some(wgpu::BlendState::REPLACE),
+            // 赤、青、緑、アルファのすべての色に書き込むようにwgpuに指示
+            write_mask: wgpu::ColorWrites::ALL,
+          })],
+          compilation_options: wgpu::PipelineCompilationOptions::default(),
+        }),
+        // 頂点を三角形に変換する際の解釈方法を記述する
+        primitive: wgpu::PrimitiveState {
+          // PrimitiveTopology::TriangleListを使うと、3つの頂点が1つの三角形に対応することになる
+          topology: wgpu::PrimitiveTopology::TriangleList,
+          strip_index_format: None,
+          // front_faceとcull_modeフィールド
+          // - 与えられた三角形が正面を向いているかどうかを決定する方法をwgpuに伝える
+          // FrontFace::Ccwは、頂点が反時計回りに配置されている場合、三角形が正面を向いていることを意味する
+          front_face: wgpu::FrontFace::Ccw,
+          // 正面を向いていないとみなされた三角形は、CullMode::Backで指定されたようにカリングされる（レンダリングに含まれない）
+          cull_mode: Some(wgpu::Face::Back),
+          polygon_mode: wgpu::PolygonMode::Fill,
+          // Requires Features::DEPTH_CLIP_CONTROL
+          unclipped_depth: false,
+          // Requires Features::CONSERVATIVE_RASTERIZATION
+          conservative: false,
+        },
+        // 今回は深度／ステンシル・バッファは使用しないので、depth_stencilはNoneのままにしておく
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState {
+          // パイプラインが使用するサンプルの数を決定する
+          count: 1,
+          // どのサンプルをアクティブにするかを指定する
+          // 今回はすべてのサンプルを使用する
+          mask: !0, // !はビット単位の否定（NOT演算子）
+          // アンチエイリアシングに関係する
+          // 今回はアンチエイリアシングを取り上げないので、これはfalseのままにしておく
+          alpha_to_coverage_enabled: false,
+        },
+        // レンダーアタッチメントがいくつの配列レイヤーを持つことができるかを示す
+        // 今回は配列テクスチャにレンダリングしないので、Noneに設定する
+        multiview: None,
+        // wgpuにシェーダーのコンパイルデータをキャッシュさせるかどうかを指定する
+        // Androidのビルドターゲットにのみ役に立つ
+        cache: None,
+      });
+
     Self {
       surface,
       device,
@@ -115,6 +204,7 @@ impl<'w> State<'w> {
       config,
       size,
       window,
+      render_pipeline,
     }
   }
 
