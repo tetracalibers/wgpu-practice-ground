@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use wgpu::{
-  Backends, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor,
-  Limits, PowerPreference, PresentMode, Queue, RequestAdapterOptions, Surface,
-  SurfaceConfiguration, SurfaceError, TextureUsages,
+  Backends, CommandEncoderDescriptor, Device, DeviceDescriptor, Features,
+  Instance, InstanceDescriptor, Limits, PowerPreference, PresentMode, Queue,
+  RequestAdapterOptions, Surface, SurfaceConfiguration, SurfaceError,
+  TextureUsages, TextureViewDescriptor,
 };
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
 
@@ -121,6 +122,10 @@ impl<'w> State<'w> {
     &self.window
   }
 
+  pub fn size(&self) -> PhysicalSize<u32> {
+    self.size
+  }
+
   pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
     if new_size.width > 0 && new_size.height > 0 {
       self.size = new_size;
@@ -138,11 +143,61 @@ impl<'w> State<'w> {
     false
   }
 
-  fn update(&mut self) {
-    unimplemented!("We don't have anything to update yet")
+  pub fn update(&mut self) {
+    // We don't have anything to update yet
   }
 
-  fn render(&mut self) -> Result<(), SurfaceError> {
-    todo!()
+  pub fn render(&mut self) -> Result<(), SurfaceError> {
+    // get_current_texture関数は、レンダリング先のサーフェスが新しいSurfaceTextureを提供するのを待機する
+    let output = self.surface.get_current_texture()?;
+
+    // デフォルト設定のTextureViewを作成する
+    // TextureViewを介して、レンダリングコードがテクスチャとどのように相互作用するかを制御する
+    let view = output.texture.create_view(&TextureViewDescriptor::default());
+
+    // GPUに送信する実際のコマンドを作成するために、CommandEncoderを作成する必要がある
+    // 最近のグラフィックフレームワークのほとんどは、GPUに送信する前にコマンドがコマンドバッファに格納されることを期待している
+    // エンコーダーはコマンドバッファを構築し、それをGPUに送ることができる
+    let mut encoder =
+      self.device.create_command_encoder(&CommandEncoderDescriptor {
+        label: Some("Render Encoder"),
+      });
+
+    // begin_render_pass()はencoderをミュータブルに借用する
+    // このミュータブルな借用を解放するまで、encoder.finish()を呼び出すことはできない
+    // このブロックは、コードがそのスコープから出たときに、その中の変数をドロップするようにRustに指示する
+    // ※）{}の代わりに、drop(render_pass)を使っても同じ効果が得られる
+    {
+      // CommandEncoderのbegin_render_passメソッドによって、描画パスRenderPassの構築を開始できる
+      // RenderPassには実際の描画のためのすべてのメソッドがある
+      // RenderPassが持つ各種のメソッドを呼ぶことで描画のためのコマンドを組み上げる
+      let _render_pass =
+        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+          label: Some("Render Pass"),
+          // フラグメントシェーダーの結果の書き込み先として使用するテクスチャビューを指定する
+          color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: &view,
+            resolve_target: None,
+            ops: wgpu::Operations {
+              load: wgpu::LoadOp::Clear(wgpu::Color {
+                r: 0.1,
+                g: 0.2,
+                b: 0.3,
+                a: 1.0,
+              }),
+              store: wgpu::StoreOp::Store,
+            },
+          })],
+          depth_stencil_attachment: None,
+          occlusion_query_set: None,
+          timestamp_writes: None,
+        });
+    }
+
+    // wgpuにコマンドバッファを終了し、GPUのレンダーキューに送信するように指示する
+    self.queue.submit(std::iter::once(encoder.finish()));
+    output.present();
+
+    Ok(())
   }
 }
