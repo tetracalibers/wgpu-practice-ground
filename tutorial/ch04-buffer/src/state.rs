@@ -303,6 +303,12 @@ impl<'window> State<'window> {
         });
 
       render_pass.set_pipeline(&self.render_pipeline);
+      // 実際に頂点バッファを設定する必要がある（そうしないと、プログラムがクラッシュしてしまう）
+      // - 第一引数：この頂点バッファに使用するバッファ・スロット（一度に複数の頂点バッファを設定することができる）
+      // - 第二引数：使用するバッファのスライス
+      //   - バッファにはハードウェアが許す限りいくつでもオブジェクトを格納できるので、sliceによってバッファのどの部分を使うかを指定できる
+      //   - バッファ全体を指定するには..を使う
+      render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
       // 3つの頂点と1つのインスタンスで何かを描くようにwgpuに指示する
       // これが@builtin(vertex_index)の由来である
       render_pass.draw(0..3, 0..1);
