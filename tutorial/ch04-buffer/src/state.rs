@@ -18,6 +18,7 @@ pub struct State<'window> {
   // ここでは、特にRenderPipelineを作成する
   render_pipeline: wgpu::RenderPipeline,
   vertex_buffer: wgpu::Buffer,
+  num_vertices: u32,
 }
 
 impl<'window> State<'window> {
@@ -204,6 +205,8 @@ impl<'window> State<'window> {
         usage: wgpu::BufferUsages::VERTEX,
       });
 
+    let num_vertices = VERTICES.len() as u32;
+
     Self {
       surface,
       device,
@@ -213,6 +216,7 @@ impl<'window> State<'window> {
       window,
       render_pipeline,
       vertex_buffer,
+      num_vertices,
     }
   }
 
@@ -309,9 +313,9 @@ impl<'window> State<'window> {
       //   - バッファにはハードウェアが許す限りいくつでもオブジェクトを格納できるので、sliceによってバッファのどの部分を使うかを指定できる
       //   - バッファ全体を指定するには..を使う
       render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-      // 3つの頂点と1つのインスタンスで何かを描くようにwgpuに指示する
+      // VERTICESで指定された頂点数の頂点と1つのインスタンスで何かを描くようにwgpuに指示する
       // これが@builtin(vertex_index)の由来である
-      render_pass.draw(0..3, 0..1);
+      render_pass.draw(0..self.num_vertices, 0..1);
     }
 
     // wgpuにコマンドバッファを終了し、GPUのレンダーキューに送信するように指示する
