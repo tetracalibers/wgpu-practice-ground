@@ -36,3 +36,40 @@ pub const VERTICES: &[Vertex] = &[
     color: [0.0, 0.0, 1.0],
   },
 ];
+
+impl Vertex {
+  // VertexBufferLayoutは、バッファがメモリ上でどのように表現されるかを定義する
+  // これがないと、render_pipelineはシェーダ内でバッファをどのようにマップすればよいかがわからない
+  // バッファは単なるバイト列なので、バッファの中にどんなデータがどのように詰めこまれているかをWebGPU側に教える必要がある
+  pub fn desc() -> wgpu::VertexBufferLayout<'static> {
+    wgpu::VertexBufferLayout {
+      // 頂点の幅を定義する
+      // シェーダが次の頂点を読みに行くとき、array_strideのバイト数を飛び越える
+      array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+      // このバッファ内の配列の各要素が頂点毎のデータを表すのか、インスタンス毎のデータを表すのかをパイプラインに伝える
+      // 新しいインスタンスの描画を開始する時だけ頂点を変更したい場合はwgpu::VertexStepMode::Instanceを指定する
+      step_mode: wgpu::VertexStepMode::Vertex,
+      // 頂点の個々のパーツを記述する
+      // 一般的に、これは構造体のフィールドと1:1の対応になる
+      attributes: &[
+        wgpu::VertexAttribute {
+          // 属性が始まるまでのオフセットをバイト単位で定義する
+          // - 最初の属性では、オフセットは通常ゼロ
+          // - それ以降の属性では、オフセットは前の属性のデータのsize_ofの和
+          offset: 0,
+          // シェーダにこのアトリビュートを格納する場所を指示する
+          shader_location: 0,
+          // シェーダに属性の形状を伝える
+          // Float32x3はシェーダコードではvec3<f32>に対応する
+          // アトリビュートに格納できる最大値はFloat32x4（Uint32x4やSint32x4も同様）
+          format: wgpu::VertexFormat::Float32x3,
+        },
+        wgpu::VertexAttribute {
+          offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+          shader_location: 1,
+          format: wgpu::VertexFormat::Float32x3,
+        },
+      ],
+    }
+  }
+}

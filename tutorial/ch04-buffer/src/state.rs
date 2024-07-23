@@ -3,7 +3,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::{event::WindowEvent, window::Window};
 
-use crate::vertex::VERTICES;
+use crate::vertex::{Vertex, VERTICES};
 
 pub struct State<'window> {
   surface: wgpu::Surface<'window>,
@@ -135,8 +135,9 @@ impl<'window> State<'window> {
           // @vertexでマークした関数
           entry_point: "vs_main",
           // 頂点シェーダに渡したい頂点の種類を伝える
-          // 今回は頂点シェーダ自体で頂点を指定するので、ここは空にしておく
-          buffers: &[],
+          buffers: &[
+            Vertex::desc(), // バッファの読み取り方法をrender_pipelineに指示する
+          ],
           compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         // fragmentは技術的にはオプションなので、Some()でラップする必要がある
