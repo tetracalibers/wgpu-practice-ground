@@ -39,7 +39,7 @@ pub const VERTICES: &[Vertex] = &[
 
 impl Vertex {
   // VertexBufferLayoutは、バッファがメモリ上でどのように表現されるかを定義する
-  // これがないと、render_pipelineはシェーダ内でバッファをどのようにマップすればよいかがわからない
+  // これがないと、render_pipelineはシェーダ内でバッファをどのようにマッピングすればよいかがわからない
   // バッファは単なるバイト列なので、バッファの中にどんなデータがどのように詰めこまれているかをWebGPU側に教える必要がある
   pub fn desc() -> wgpu::VertexBufferLayout<'static> {
     wgpu::VertexBufferLayout {
