@@ -223,6 +223,20 @@ name = "bytemuck"
 version = "1.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b236fc92302c97ed75b38da1f4917b5cdda4984745740f153a5d3059e48d725e"
+dependencies = [
+ "bytemuck_derive",
+]
+
+[[package]]
+name = "bytemuck_derive"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ee891b04274a59bd38b412188e24b849617b2e45a0fd8d057deb63e7403761b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.71",
+]
 
 [[package]]
 name = "bytes"
@@ -314,6 +328,18 @@ dependencies = [
 name = "ch03-pipeline"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
+ "log",
+ "pollster",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "ch04-buffer"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
  "env_logger",
  "log",
  "pollster",
@@ -2001,6 +2027,7 @@ dependencies = [
  "ch01-window",
  "ch02-surface",
  "ch03-pipeline",
+ "ch04-buffer",
 ]
 
 [[package]]

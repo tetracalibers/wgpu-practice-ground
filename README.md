@@ -13,3 +13,7 @@ cargo run -- tutorial/ch02-surface
 ```bash
 cargo run -- tutorial/ch03-pipeline
 ```
+
+```bash
+cargo run -- tutorial/ch04-buffer
+```
