@@ -2012,6 +2012,7 @@ dependencies = [
  "ch01-window",
  "ch02-surface",
  "ch03-pipeline",
+ "ch04-buffer",
 ]
 
 [[package]]

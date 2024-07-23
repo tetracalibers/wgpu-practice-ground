@@ -20,6 +20,9 @@ fn main() {
     "tutorial/ch03-pipeline" => {
       ch03_pipeline::run().unwrap();
     }
+    "tutorial/ch04-buffer" => {
+      ch04_buffer::run().unwrap();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
