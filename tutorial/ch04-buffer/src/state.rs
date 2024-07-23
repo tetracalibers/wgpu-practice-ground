@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
+use wgpu::util::DeviceExt;
 use winit::{event::WindowEvent, window::Window};
+
+use crate::vertex::VERTICES;
 
 pub struct State<'window> {
   surface: wgpu::Surface<'window>,
@@ -14,6 +17,7 @@ pub struct State<'window> {
   // - OpenGLでのシェーダープログラムのより堅牢なバージョンと考えることができる
   // ここでは、特にRenderPipelineを作成する
   render_pipeline: wgpu::RenderPipeline,
+  vertex_buffer: wgpu::Buffer,
 }
 
 impl<'window> State<'window> {
@@ -191,6 +195,14 @@ impl<'window> State<'window> {
         cache: None,
       });
 
+    let vertex_buffer =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        // bytemuckを使ってVERTICESを&[u8]としてキャスト
+        contents: bytemuck::cast_slice(VERTICES),
+        usage: wgpu::BufferUsages::VERTEX,
+      });
+
     Self {
       surface,
       device,
@@ -199,6 +211,7 @@ impl<'window> State<'window> {
       size,
       window,
       render_pipeline,
+      vertex_buffer,
     }
   }
 
