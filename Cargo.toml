@@ -14,4 +14,5 @@ members = [
   "tutorial/ch01-window",
   "tutorial/ch02-surface",
   "tutorial/ch03-pipeline",
+  "tutorial/ch04-buffer",
 ]

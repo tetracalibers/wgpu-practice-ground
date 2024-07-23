@@ -322,6 +322,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ch04-buffer"
+version = "0.1.0"
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
