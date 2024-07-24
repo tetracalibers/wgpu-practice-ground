@@ -18,7 +18,6 @@ pub struct State<'window> {
   // ここでは、特にRenderPipelineを作成する
   render_pipeline: wgpu::RenderPipeline,
   vertex_buffer: wgpu::Buffer,
-  num_vertices: u32,
   index_buffer: wgpu::Buffer,
   num_indices: u32,
 }
@@ -206,7 +205,6 @@ impl<'window> State<'window> {
         contents: bytemuck::cast_slice(VERTICES),
         usage: wgpu::BufferUsages::VERTEX,
       });
-    let num_vertices = VERTICES.len() as u32;
 
     let index_buffer =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -225,7 +223,6 @@ impl<'window> State<'window> {
       window,
       render_pipeline,
       vertex_buffer,
-      num_vertices,
       index_buffer,
       num_indices,
     }
