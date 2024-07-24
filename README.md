@@ -17,3 +17,7 @@ cargo run -- tutorial/ch03-pipeline
 ```bash
 cargo run -- tutorial/ch04-buffer
 ```
+
+```bash
+cargo run -- tutorial/ch05-indice
+```

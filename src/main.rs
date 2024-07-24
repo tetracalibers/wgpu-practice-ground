@@ -23,6 +23,9 @@ fn main() {
     "tutorial/ch04-buffer" => {
       ch04_buffer::run().unwrap();
     }
+    "tutorial/ch05-indice" => {
+      ch05_indice::run().unwrap();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
