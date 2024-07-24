@@ -16,4 +16,5 @@ members = [
   "tutorial/ch02-surface",
   "tutorial/ch03-pipeline",
   "tutorial/ch04-buffer",
+  "tutorial/ch05-indice",
 ]
