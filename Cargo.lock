@@ -350,6 +350,13 @@ dependencies = [
 [[package]]
 name = "ch05-indice"
 version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "pollster",
+ "wgpu",
+ "winit",
+]
 
 [[package]]
 name = "codespan-reporting"
