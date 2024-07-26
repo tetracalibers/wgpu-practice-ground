@@ -21,6 +21,7 @@ pub struct State<'window> {
   vertex_buffer: wgpu::Buffer,
   index_buffer: wgpu::Buffer,
   num_indices: u32,
+  diffuse_bind_group: wgpu::BindGroup,
 }
 
 impl<'window> State<'window> {
@@ -355,6 +356,7 @@ impl<'window> State<'window> {
       vertex_buffer,
       index_buffer,
       num_indices,
+      diffuse_bind_group,
     }
   }
 
@@ -445,6 +447,7 @@ impl<'window> State<'window> {
         });
 
       render_pass.set_pipeline(&self.render_pipeline);
+      render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
       // 実際に頂点バッファを設定する必要がある（そうしないと、プログラムがクラッシュしてしまう）
       // - 第一引数：この頂点バッファに使用するバッファ・スロット（一度に複数の頂点バッファを設定することができる）
       // - 第二引数：使用するバッファのスライス
