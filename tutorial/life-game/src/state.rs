@@ -11,6 +11,8 @@ impl State {
     let window = Arc::new(window);
 
     let instance = Self::create_gpu_instance();
+    // 描画先
+    let surface = instance.create_surface(Arc::clone(&window)).unwrap();
 
     Self { window }
   }
