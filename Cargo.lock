@@ -362,6 +362,14 @@ dependencies = [
 [[package]]
 name = "ch06-texture"
 version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "log",
+ "pollster",
+ "wgpu",
+ "winit",
+]
 
 [[package]]
 name = "codespan-reporting"
