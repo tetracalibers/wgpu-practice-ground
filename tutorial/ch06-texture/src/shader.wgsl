@@ -1,3 +1,5 @@
+// --- Vertex shader
+
 struct VertexInput {
   @location(0) position: vec3<f32>,
   @location(1) tex_coords: vec2<f32>,
@@ -26,6 +28,8 @@ fn vs_main(
   
   return out;
 }
+
+// --- Fragment shader
 
 // uniforms
 // - group()はset_bind_group()の第1パラメータに対応する
