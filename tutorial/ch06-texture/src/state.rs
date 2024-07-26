@@ -119,7 +119,7 @@ impl<'window> State<'window> {
     // ロード
     let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
     // RGBAバイトのVecに変換
-    let diffuse_rgba = diffuse_image.as_rgba8();
+    let diffuse_rgba = diffuse_image.to_rgba8();
 
     let dimensions = diffuse_image.dimensions();
     let texture_size = wgpu::Extent3d {
