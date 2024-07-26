@@ -2053,6 +2053,7 @@ dependencies = [
  "ch03-pipeline",
  "ch04-buffer",
  "ch05-indice",
+ "ch06-texture",
 ]
 
 [[package]]
