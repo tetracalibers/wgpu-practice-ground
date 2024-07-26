@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use image::GenericImageView;
 use wgpu::util::DeviceExt;
 use winit::{event::WindowEvent, window::Window};
 
-use crate::vertex::{Vertex, INDICES, VERTICES};
+use crate::{
+  texture::Texture,
+  vertex::{Vertex, INDICES, VERTICES},
+};
 
 pub struct State<'window> {
   surface: wgpu::Surface<'window>,
@@ -22,6 +24,7 @@ pub struct State<'window> {
   index_buffer: wgpu::Buffer,
   num_indices: u32,
   diffuse_bind_group: wgpu::BindGroup,
+  diffuse_texture: Texture,
 }
 
 impl<'window> State<'window> {
@@ -117,86 +120,9 @@ impl<'window> State<'window> {
 
     // 画像ファイルからバイナリを取得
     let diffuse_bytes = include_bytes!("img/tomixy.jpg");
-    // ロード
-    let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
-    // RGBAバイトのVecに変換
-    let diffuse_rgba = diffuse_image.to_rgba8();
-
-    let dimensions = diffuse_image.dimensions();
-    let texture_size = wgpu::Extent3d {
-      width: dimensions.0,
-      height: dimensions.1,
-      depth_or_array_layers: 1,
-    };
-
-    let diffuse_texture = device.create_texture(&wgpu::TextureDescriptor {
-      label: Some("diffuse_texture"),
-      // すべてのテクスチャは3Dとして保存されるので、深度を1に設定することで2Dテクスチャを表現する
-      size: texture_size,
-      mip_level_count: 1,
-      sample_count: 1,
-      dimension: wgpu::TextureDimension::D2,
-      // ほとんどの画像はsRGBで保存されているので、ここではそれを反映させる必要がある
-      format: wgpu::TextureFormat::Rgba8UnormSrgb,
-      // TEXTURE_BINDINGはwgpuにシェーダーでこのテクスチャーを使いたいことを伝える
-      // COPY_DSTはこのテクスチャにデータをコピーすることを意味する
-      usage: wgpu::TextureUsages::TEXTURE_BINDING
-        | wgpu::TextureUsages::COPY_DST,
-      // SurfaceConfigと同様
-      // このテクスチャの TextureView を作成するためにどのテクスチャ形式を使用できるかを指定する
-      // 基本となるテクスチャ形式 (この場合Rgba8UnormSrgb)は常にサポートされる
-      // 異なるテクスチャ形式の使用は、WebGL2ではサポートされていないことに注意
-      view_formats: &[],
-    });
-
-    // テクスチャにデータを取り込む
-    // Texture構造体には、データを直接操作するメソッドはない
-    // 先ほど作成したqueueのwrite_textureというメソッドを使ってテクスチャを読み込むことができる
-    queue.write_texture(
-      // wgpuへどこにピクセルデータをコピーすればよいか伝える
-      wgpu::ImageCopyTexture {
-        texture: &diffuse_texture,
-        mip_level: 0,
-        origin: wgpu::Origin3d::ZERO,
-        aspect: wgpu::TextureAspect::All,
-      },
-      // 実際のピクセルデータ
-      &diffuse_rgba,
-      // テクスチャのレイアウト
-      wgpu::ImageDataLayout {
-        offset: 0,
-        bytes_per_row: Some(4 * dimensions.0),
-        rows_per_image: Some(dimensions.1),
-      },
-      texture_size,
-    );
-
-    // TextureViewはテクスチャを表示するためのもの
-    let diffuse_texture_view =
-      diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-    // SamplerはTextureをどのようにサンプリングするかを制御する
-    // サンプリングはGIMP/Photoshopのスポイトツールに似た働きをする
-    // プログラムはテクスチャ上の座標（テクスチャ座標）を提供し、Samplerはテクスチャといくつかの内部パラメータに基づいて対応する色を返す
-    let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-      // SamplerがTextureの外側の座標を取得した場合の処理を決定する
-      // - ClampToEdge：テクスチャの外側にあるテクスチャ座標は、テクスチャの端にある最も近いピクセルの色を返す
-      // - Repeat：テクスチャ座標がテクスチャの寸法を超えると、テクスチャは繰り返される
-      // - MirrorRepeat：Repeatと似ているが、境界を超えると画像が反転する
-      address_mode_u: wgpu::AddressMode::ClampToEdge,
-      address_mode_v: wgpu::AddressMode::ClampToEdge,
-      address_mode_w: wgpu::AddressMode::ClampToEdge,
-      // サンプルのフットプリントが1テクセルより小さいときと大きいときの処理を記述する
-      // この2つのフィールドは通常、シーン内のマッピングがカメラから遠いか近い場合に機能する
-      // - Linear: 各次元で2つのテクセルを選択し、それらの値の間の線形補間を返す
-      // - Nearest: テクスチャ座標に最も近いテクセル値を返す。これにより、遠くから見ると鮮明だが、近くではピクセル化された画像が作成される
-      mag_filter: wgpu::FilterMode::Linear,
-      min_filter: wgpu::FilterMode::Nearest,
-      // ミップマップ間のブレンド方法をサンプラーに指示する
-      // (mag/min)_filterと同じように機能する
-      mipmap_filter: wgpu::FilterMode::Nearest,
-      ..Default::default()
-    });
+    let diffuse_texture =
+      Texture::from_bytes(&device, &queue, diffuse_bytes, "tomixy.jpg")
+        .unwrap();
 
     // BindGroupは、リソースのセットと、それらがシェーダによってどのようにアクセスできるかを記述する
     // BindGroupLayoutを使ってBindGroupを作成する
@@ -235,11 +161,11 @@ impl<'window> State<'window> {
         entries: &[
           wgpu::BindGroupEntry {
             binding: 0,
-            resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+            resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
           },
           wgpu::BindGroupEntry {
             binding: 1,
-            resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+            resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
           },
         ],
       });
@@ -358,6 +284,7 @@ impl<'window> State<'window> {
       index_buffer,
       num_indices,
       diffuse_bind_group,
+      diffuse_texture,
     }
   }
 
