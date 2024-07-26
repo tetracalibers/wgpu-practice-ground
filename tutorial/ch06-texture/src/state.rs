@@ -170,6 +170,33 @@ impl<'window> State<'window> {
       texture_size,
     );
 
+    // TextureViewはテクスチャを表示するためのもの
+    let diffuse_texture_view =
+      diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+    // SamplerはTextureをどのようにサンプリングするかを制御する
+    // サンプリングはGIMP/Photoshopのスポイトツールに似た働きをする
+    // プログラムはテクスチャ上の座標（テクスチャ座標）を提供し、Samplerはテクスチャといくつかの内部パラメータに基づいて対応する色を返す
+    let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+      // SamplerがTextureの外側の座標を取得した場合の処理を決定する
+      // - ClampToEdge：テクスチャの外側にあるテクスチャ座標は、テクスチャの端にある最も近いピクセルの色を返す
+      // - Repeat：テクスチャ座標がテクスチャの寸法を超えると、テクスチャは繰り返される
+      // - MirrorRepeat：Repeatと似ているが、境界を超えると画像が反転する
+      address_mode_u: wgpu::AddressMode::ClampToEdge,
+      address_mode_v: wgpu::AddressMode::ClampToEdge,
+      address_mode_w: wgpu::AddressMode::ClampToEdge,
+      // サンプルのフットプリントが1テクセルより小さいときと大きいときの処理を記述する
+      // この2つのフィールドは通常、シーン内のマッピングがカメラから遠いか近い場合に機能する
+      // - Linear: 各次元で2つのテクセルを選択し、それらの値の間の線形補間を返す
+      // - Nearest: テクスチャ座標に最も近いテクセル値を返す。これにより、遠くから見ると鮮明だが、近くではピクセル化された画像が作成される
+      mag_filter: wgpu::FilterMode::Linear,
+      min_filter: wgpu::FilterMode::Nearest,
+      // ミップマップ間のブレンド方法をサンプラーに指示する
+      // (mag/min)_filterと同じように機能する
+      mipmap_filter: wgpu::FilterMode::Nearest,
+      ..Default::default()
+    });
+
     // シェーダーをロードする
     // ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
