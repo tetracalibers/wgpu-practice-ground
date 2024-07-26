@@ -148,6 +148,7 @@ impl<'window> State<'window> {
       view_formats: &[],
     });
 
+    // テクスチャにデータを取り込む
     // Texture構造体には、データを直接操作するメソッドはない
     // 先ほど作成したqueueのwrite_textureというメソッドを使ってテクスチャを読み込むことができる
     queue.write_texture(
