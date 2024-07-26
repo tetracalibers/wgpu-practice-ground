@@ -119,9 +119,9 @@ impl<'window> State<'window> {
     };
 
     // 画像ファイルからバイナリを取得
-    let diffuse_bytes = include_bytes!("img/tomixy.jpg");
+    let diffuse_bytes = include_bytes!("img/elephants.jpg");
     let diffuse_texture =
-      Texture::from_bytes(&device, &queue, diffuse_bytes, "tomixy.jpg")
+      Texture::from_bytes(&device, &queue, diffuse_bytes, "elephants.jpg")
         .unwrap();
 
     // BindGroupは、リソースのセットと、それらがシェーダによってどのようにアクセスできるかを記述する
