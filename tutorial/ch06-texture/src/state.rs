@@ -24,6 +24,7 @@ pub struct State<'window> {
   index_buffer: wgpu::Buffer,
   num_indices: u32,
   diffuse_bind_group: wgpu::BindGroup,
+  #[allow(unused)]
   diffuse_texture: Texture,
 }
 
