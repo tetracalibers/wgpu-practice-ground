@@ -15,7 +15,7 @@ impl State {
     let surface = instance.create_surface(Arc::clone(&window)).unwrap();
     // WebGPU内でデバイスの特定のGPUハードウェアを表現したもの
     // OSのネイティブグラフィックスAPIからWebGPUへの変換レイヤー
-    let adapter = Self::create_adapter(&instance, &surface).await.unwrap();
+    let adapter = Self::create_adapter(&instance, &surface).await;
     // device
     // - 論理デバイス（自分だけの仮想的なGPU）
     // - 他のアプリケーションが使うテクスチャの内容などが読めないように、GPUを多重化したもの
@@ -43,7 +43,7 @@ impl State {
   async fn create_adapter<'w>(
     instance: &wgpu::Instance,
     surface: &wgpu::Surface<'w>,
-  ) -> Option<wgpu::Adapter> {
+  ) -> wgpu::Adapter {
     instance
       .request_adapter(&wgpu::RequestAdapterOptions {
         // マルチGPU搭載デバイス上で省電力のハードウェアを使用するか、または高パフォーマンスのハードウェアを使用するか
@@ -57,6 +57,7 @@ impl State {
         ..Default::default()
       })
       .await
+      .unwrap()
   }
 
   async fn create_device(
