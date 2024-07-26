@@ -21,3 +21,7 @@ cargo run -- tutorial/ch04-buffer
 ```bash
 cargo run -- tutorial/ch05-indice
 ```
+
+```bash
+cargo run -- tutorial/ch06-texture
+```
