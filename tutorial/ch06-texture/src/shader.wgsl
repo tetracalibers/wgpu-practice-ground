@@ -23,7 +23,9 @@ fn vs_main(
   // varで定義された変数は変更できるが、型を指定する必要がある
   var out: VertexOutput;
   
-  out.tex_coords = model.tex_coords;
+  // wgpuのワールド座標はY軸が上を向いているのに対し、テクスチャ座標はY軸が下を向いている
+  // 画像を上下反転させないため、各テクスチャ座標のy座標を1-yに置き換える
+  out.tex_coords = vec2<f32>(model.tex_coords.x, 1.0 - model.tex_coords.y);
   out.clip_position = vec4<f32>(model.position, 1.0);
   
   return out;
