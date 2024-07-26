@@ -148,6 +148,27 @@ impl<'window> State<'window> {
       view_formats: &[],
     });
 
+    // Texture構造体には、データを直接操作するメソッドはない
+    // 先ほど作成したqueueのwrite_textureというメソッドを使ってテクスチャを読み込むことができる
+    queue.write_texture(
+      // wgpuへどこにピクセルデータをコピーすればよいか伝える
+      wgpu::ImageCopyTexture {
+        texture: &diffuse_texture,
+        mip_level: 0,
+        origin: wgpu::Origin3d::ZERO,
+        aspect: wgpu::TextureAspect::All,
+      },
+      // 実際のピクセルデータ
+      &diffuse_rgba,
+      // テクスチャのレイアウト
+      wgpu::ImageDataLayout {
+        offset: 0,
+        bytes_per_row: Some(4 * dimensions.0),
+        rows_per_image: Some(dimensions.1),
+      },
+      texture_size,
+    );
+
     // シェーダーをロードする
     // ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
