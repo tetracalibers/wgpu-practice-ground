@@ -455,6 +455,7 @@ dependencies = [
 name = "ch06-texture"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bytemuck",
  "env_logger",
  "image",
