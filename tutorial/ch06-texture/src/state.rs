@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use image::GenericImageView;
 use wgpu::util::DeviceExt;
 use winit::{event::WindowEvent, window::Window};
 
@@ -112,6 +113,40 @@ impl<'window> State<'window> {
       view_formats: vec![],
       desired_maximum_frame_latency: 2,
     };
+
+    // 画像ファイルからバイナリを取得
+    let diffuse_bytes = include_bytes!("img/tomixy.jpg");
+    // ロード
+    let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
+    // RGBAバイトのVecに変換
+    let diffuse_rgba = diffuse_image.as_rgba8();
+
+    let dimensions = diffuse_image.dimensions();
+    let texture_size = wgpu::Extent3d {
+      width: dimensions.0,
+      height: dimensions.1,
+      depth_or_array_layers: 1,
+    };
+
+    let diffuse_texture = device.create_texture(&wgpu::TextureDescriptor {
+      label: Some("diffuse_texture"),
+      // すべてのテクスチャは3Dとして保存されるので、深度を1に設定することで2Dテクスチャを表現する
+      size: texture_size,
+      mip_level_count: 1,
+      sample_count: 1,
+      dimension: wgpu::TextureDimension::D2,
+      // ほとんどの画像はsRGBで保存されているので、ここではそれを反映させる必要がある
+      format: wgpu::TextureFormat::Rgba8UnormSrgb,
+      // TEXTURE_BINDINGはwgpuにシェーダーでこのテクスチャーを使いたいことを伝える
+      // COPY_DSTはこのテクスチャにデータをコピーすることを意味する
+      usage: wgpu::TextureUsages::TEXTURE_BINDING
+        | wgpu::TextureUsages::COPY_DST,
+      // SurfaceConfigと同様
+      // このテクスチャの TextureView を作成するためにどのテクスチャ形式を使用できるかを指定する
+      // 基本となるテクスチャ形式 (この場合Rgba8UnormSrgb)は常にサポートされる
+      // 異なるテクスチャ形式の使用は、WebGL2ではサポートされていないことに注意
+      view_formats: &[],
+    });
 
     // シェーダーをロードする
     // ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
