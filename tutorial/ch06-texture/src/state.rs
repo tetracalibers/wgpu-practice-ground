@@ -197,6 +197,52 @@ impl<'window> State<'window> {
       ..Default::default()
     });
 
+    // BindGroupは、リソースのセットと、それらがシェーダによってどのようにアクセスできるかを記述する
+    // BindGroupLayoutを使ってBindGroupを作成する
+    let texture_bind_group_layout =
+      device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("texture_bind_group_layout"),
+        entries: &[
+          // バインディング0でサンプリングされたテクスチャ用
+          wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            // フラグメントシェーダからのみ見える
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+              sample_type: wgpu::TextureSampleType::Float { filterable: true },
+              view_dimension: wgpu::TextureViewDimension::D2,
+              multisampled: false,
+            },
+            count: None,
+          },
+          // バインディング1でサンプラー用
+          wgpu::BindGroupLayoutEntry {
+            binding: 1,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            count: None,
+          },
+        ],
+      });
+    // BindGroupが分かれているのは、同じBindGroupLayoutを共有していれば、その場でBindGroupを入れ替えられるから
+    // 作成したTextureとSamplerは、それぞれBindGroupに追加する必要がある
+    // ここでは、テクスチャごとに新しいバインドグループを作成する
+    let diffuse_bind_group =
+      device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("diffuse_bind_group"),
+        layout: &texture_bind_group_layout,
+        entries: &[
+          wgpu::BindGroupEntry {
+            binding: 0,
+            resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+          },
+          wgpu::BindGroupEntry {
+            binding: 1,
+            resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+          },
+        ],
+      });
+
     // シェーダーをロードする
     // ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
