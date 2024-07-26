@@ -26,6 +26,9 @@ fn main() {
     "tutorial/ch05-indice" => {
       ch05_indice::run().unwrap();
     }
+    "tutorial/ch06-texture" => {
+      ch06_texture::run().unwrap();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
