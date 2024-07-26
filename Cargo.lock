@@ -2733,6 +2733,7 @@ dependencies = [
  "ch04-buffer",
  "ch05-indice",
  "ch06-texture",
+ "life-game",
 ]
 
 [[package]]
