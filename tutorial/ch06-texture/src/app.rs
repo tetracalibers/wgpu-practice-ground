@@ -16,7 +16,7 @@ pub struct Application<'w> {
 impl<'w> ApplicationHandler for Application<'w> {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
     let window_attributes =
-      Window::default_attributes().with_title("Tutorial 05 - Indice");
+      Window::default_attributes().with_title("Tutorial 06 - Texture");
 
     let window = event_loop
       .create_window(window_attributes)
