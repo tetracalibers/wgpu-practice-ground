@@ -16,6 +16,13 @@ impl State {
     // WebGPU内でデバイスの特定のGPUハードウェアを表現したもの
     // OSのネイティブグラフィックスAPIからWebGPUへの変換レイヤー
     let adapter = Self::create_adapter(&instance, &surface).await.unwrap();
+    // device
+    // - 論理デバイス（自分だけの仮想的なGPU）
+    // - 他のアプリケーションが使うテクスチャの内容などが読めないように、GPUを多重化したもの
+    // - GPU とのほとんどのやり取りを行うための主なインターフェースとなる
+    // queue
+    // - GPUに仕事を投げ込むためのキュー
+    let (device, queue) = Self::create_device(&adapter).await;
 
     Self { window }
   }
@@ -50,5 +57,25 @@ impl State {
         ..Default::default()
       })
       .await
+  }
+
+  async fn create_device(
+    adapter: &wgpu::Adapter,
+  ) -> (wgpu::Device, wgpu::Queue) {
+    adapter
+      .request_device(
+        &wgpu::DeviceDescriptor {
+          label: None,
+          // 欲しい追加機能を指定できるが、ここでは余計な機能は使わない
+          required_features: wgpu::Features::empty(),
+          // 作成できるリソースの種類の上限を記述する
+          // ここでは、ほとんどのデバイスをサポートできるように、デフォルトを使用
+          required_limits: wgpu::Limits::default(),
+          ..Default::default()
+        },
+        None,
+      )
+      .await
+      .unwrap()
   }
 }
