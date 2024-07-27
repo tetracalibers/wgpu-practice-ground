@@ -83,6 +83,48 @@ impl<'w> State<'w> {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
+    //
+    // シェーダーでユニフォームを宣言しても、それだけでは作成したバッファとは接続されない
+    // 接続するためには、バインドグループを作成して、設定する必要がある
+    //
+    // バインドグループとは、シェーダーにも同時にアクセスできるようにするリソースのコレクション
+    // ユニフォームバッファなど、いくつかの種類のバッファのほか、テクスチャやサンプラーなどのその他のリソースを含めることができる
+    //
+
+    // BindGroupとBindGroupLayoutが分かれているのは、同じBindGroupLayoutを共有していれば、その場でBindGroupを入れ替えられるから
+    let uniform_bind_group_layout =
+      device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("Cell renderer bind group layout"),
+        entries: &[wgpu::BindGroupLayoutEntry {
+          // シェーダーで入力した@binding()の値に対応する
+          binding: 0,
+          // 頂点シェーダからのみ見える
+          visibility: wgpu::ShaderStages::VERTEX,
+          ty: wgpu::BindingType::Buffer {
+            ty: wgpu::BufferBindingType::Uniform,
+            // バッファ内のデータの位置が変わる可能性があることを意味する
+            // これは、サイズが異なる複数のデータセットを1つのバッファに格納する場合に当てはまる
+            // これをtrueに設定すると、後でオフセットを指定する必要がある
+            has_dynamic_offset: false,
+            // バッファの最小サイズを指定する
+            min_binding_size: None,
+          },
+          count: None,
+        }],
+      });
+    let uniform_bind_group =
+      device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Cell renderer bind group"),
+        layout: &uniform_bind_group_layout,
+        entries: &[wgpu::BindGroupEntry {
+          binding: 0,
+          // 指定したバインディングインデックスの変数に公開する実際のリソース
+          // - バインドグループがポイントするリソースを作成後に変更することはできないが、これらのリソースの内容は変更できる
+          // - たとえば、ユニフォームバッファを変更して新しいグリッドサイズを格納すると、変更後は、このバインドグループを使用する描画呼び出しで、その変更内容が反映される
+          resource: uniform_buffer.as_entire_binding(),
+        }],
+      });
+
     // シェーダーをコンパイルする
     // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
     // ※）必要に応じて、頂点シェーダーとフラグメントシェーダーで別々のシェーダーモジュールを作成することもできる
