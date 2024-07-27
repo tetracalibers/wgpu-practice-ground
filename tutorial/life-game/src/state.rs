@@ -118,7 +118,7 @@ impl<'w> State<'w> {
               load: wgpu::LoadOp::Clear(wgpu::Color {
                 r: 0.0,
                 g: 0.0,
-                b: 0.0,
+                b: 0.2,
                 a: 1.0,
               }),
               // レンダリング結果をviewで指定したTexture（この場合はSurfaceTexture）に保存するかどうか
