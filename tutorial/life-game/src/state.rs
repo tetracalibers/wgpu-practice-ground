@@ -12,6 +12,9 @@ pub struct State<'w> {
   device: wgpu::Device,
   queue: wgpu::Queue,
   config: wgpu::SurfaceConfiguration,
+  render_pipeline: wgpu::RenderPipeline,
+  vertex_buffer: wgpu::Buffer,
+  num_vertices: u32,
 }
 
 impl<'w> State<'w> {
@@ -51,6 +54,7 @@ impl<'w> State<'w> {
         // ここでは、バッファを頂点データとして使用するとともに、データのコピー先としても使用する
         usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
       });
+    let num_vertices = VERTICES.len() as u32;
 
     // シェーダーをコンパイルする
     // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
@@ -164,6 +168,9 @@ impl<'w> State<'w> {
       device,
       queue,
       config,
+      render_pipeline,
+      vertex_buffer,
+      num_vertices,
     }
   }
 
@@ -220,7 +227,7 @@ impl<'w> State<'w> {
     {
       // 各レンダリングパスは、beginRenderPass()の呼び出しで始まる
       // beginRenderPass()では、実行されたすべての描画コマンドの出力を受け取るテクスチャを定義する
-      let _render_pass =
+      let mut render_pass =
         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
           label: Some("Render Pass"),
           // アタッチメントは、複数のテクスチャを使用できる仕組み
@@ -251,6 +258,16 @@ impl<'w> State<'w> {
           timestamp_writes: None,
           occlusion_query_set: None,
         });
+
+      // 描画に使用するパイプラインを指定する
+      // パイプラインには、使用するシェーダー、頂点データのレイアウト、その他関連する状態データが含まれる
+      render_pass.set_pipeline(&self.render_pipeline);
+      // 実際に頂点バッファを設定する
+      // - このバッファは現在のパイプラインのvertex.buffers定義の0番目の要素に相当するため、0を指定して呼び出す
+      // - sliceによってバッファのどの部分を使うかを指定できる（ここでは、バッファ全体を指定）
+      render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+      // VERTICESで指定された頂点数の頂点と1つのインスタンスで何かを描くようにwgpuに指示する
+      render_pass.draw(0..self.num_vertices, 0..1);
     }
 
     //
