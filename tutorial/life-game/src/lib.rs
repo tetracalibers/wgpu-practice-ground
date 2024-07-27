@@ -1,5 +1,6 @@
 mod app;
 mod state;
+mod vertex;
 
 use std::error::Error;
 
