@@ -6,7 +6,7 @@ use winit::{dpi::PhysicalSize, window::Window};
 use crate::vertex::{Vertex, VERTICES};
 
 // グリッドの縦方向と横方向にそれぞれいくつのセルが存在するか
-const GRID_SIZE: u8 = 4;
+const GRID_SIZE: u32 = 4;
 
 pub struct State<'w> {
   window: Arc<Window>,
@@ -79,7 +79,7 @@ impl<'w> State<'w> {
     let uniform_buffer =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Grid uniforms"),
-        contents: &[GRID_SIZE, GRID_SIZE],
+        contents: bytemuck::cast_slice(&[GRID_SIZE, GRID_SIZE]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
