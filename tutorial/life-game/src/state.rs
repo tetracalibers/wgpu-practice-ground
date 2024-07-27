@@ -154,11 +154,11 @@ impl<'w> State<'w> {
     //
 
     // 頂点バッファ以外にどのような種類の入力がパイプラインで必要かを示す
-    // ここでは特に必要なものはない
     let render_pipeline_layout =
       device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Cell pipeline layout"),
-        bind_group_layouts: &[],
+        // パイプラインが使用できるBindGroupLayoutのリスト
+        bind_group_layouts: &[&uniform_bind_group_layout],
         push_constant_ranges: &[],
       });
     let render_pipeline =
