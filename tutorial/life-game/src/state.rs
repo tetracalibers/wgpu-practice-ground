@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
+use wgpu::util::DeviceExt;
 use winit::{dpi::PhysicalSize, window::Window};
+
+use crate::vertex::VERTICES;
 
 pub struct State<'w> {
   window: Arc<Window>,
@@ -35,6 +38,19 @@ impl<'w> State<'w> {
     let surface_caps = surface.get_capabilities(&adapter);
     // デバイスで使用するSurfaceの構成
     let config = Self::create_surface_config(size, &surface_caps);
+
+    // 頂点データを保持するためのバッファ
+    let vertex_buffer =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        // 作成するすべてのWebGPUオブジェクトには、オプションでラベルを指定することができる
+        // 問題が発生した場合は、WebGPUが生成するエラーメッセージでこれらのラベルが使用される
+        label: Some("Cell vertices"),
+        // bytemuckを使ってVERTICESを&[u8]としてキャスト
+        contents: bytemuck::cast_slice(VERTICES),
+        // バッファの使用方法を指定する
+        // ここでは、バッファを頂点データとして使用するとともに、データのコピー先としても使用する
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+      });
 
     Self {
       window,
