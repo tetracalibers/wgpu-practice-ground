@@ -6,6 +6,9 @@
 // これらのピクセルの色の結果がテクスチャに蓄積され、画面上に表示される
 //
 
+// gridという名前のユニフォームを定義
+@group(0) @binding(0) var<uniform> grid: vec2f;
+
 //
 // 頂点シェーダーは関数として定義され、GPUではVertexBuffer内の頂点ごとに1回この関数が呼び出される
 // 頂点シェーダー関数が呼び出されるたびに、VertexBufferから異なる位置が引数として関数に渡され、クリップ空間内の対応する位置が返される
@@ -31,7 +34,7 @@
 //
 @vertex
 fn vs_main(@location(0) pos: vec2f) -> @builtin(position) vec4f {
-  return vec4f(pos, 0, 1);
+  return vec4f(pos / grid, 0, 1);
 }
 
 //
