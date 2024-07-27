@@ -18,6 +18,7 @@ pub struct State<'w> {
   render_pipeline: wgpu::RenderPipeline,
   vertex_buffer: wgpu::Buffer,
   num_vertices: u32,
+  uniform_bind_group: wgpu::BindGroup,
 }
 
 impl<'w> State<'w> {
@@ -240,6 +241,7 @@ impl<'w> State<'w> {
       render_pipeline,
       vertex_buffer,
       num_vertices,
+      uniform_bind_group,
     }
   }
 
@@ -331,6 +333,10 @@ impl<'w> State<'w> {
       // 描画に使用するパイプラインを指定する
       // パイプラインには、使用するシェーダー、頂点データのレイアウト、その他関連する状態データが含まれる
       render_pass.set_pipeline(&self.render_pipeline);
+      // バインドグループを使用するようWebGPUに伝える
+      // - 1つ目の引数として渡される0は、シェーダーのコードの@group(0)に対応する
+      // - ここでは、@group(0)に属する各@bindingで、このバインドグループのリソースを使用すると指定している
+      render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
       // 実際に頂点バッファを設定する
       // - このバッファは現在のパイプラインのvertex.buffers定義の0番目の要素に相当するため、0を指定して呼び出す
       // - sliceによってバッファのどの部分を使うかを指定できる（ここでは、バッファ全体を指定）
