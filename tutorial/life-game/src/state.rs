@@ -5,6 +5,9 @@ use winit::{dpi::PhysicalSize, window::Window};
 
 use crate::vertex::{Vertex, VERTICES};
 
+// グリッドの縦方向と横方向にそれぞれいくつのセルが存在するか
+const GRID_SIZE: u8 = 4;
+
 pub struct State<'w> {
   window: Arc<Window>,
   size: PhysicalSize<u32>,
@@ -55,6 +58,30 @@ impl<'w> State<'w> {
         usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
       });
     let num_vertices = VERTICES.len() as u32;
+
+    //
+    // シェーダーは、グリッドのサイズに応じて表示内容を変更するため、まずは選択したグリッドのサイズをシェーダーに伝える必要がある
+    // シェーダーにサイズをハードコードすることもできるが…
+    // この場合、グリッドのサイズを変更するたびにシェーダーおよびレンダリングパイプラインの再作成が必要となり、コストがかかる
+    // ハードコードよりもスマートな方法として、グリッドのサイズをユニフォームとしてシェーダーに提供する方法がある
+    //
+    // 頂点シェーダーが呼び出されるたびに、頂点バッファから異なる値が渡されるが、
+    // ユニフォームを使用すると、すべての呼び出しでユニフォームバッファから同じ値を渡すことができる
+    //
+    // ユニフォームは、
+    // - ジオメトリで共通する値（位置など）
+    // - アニメーションのフレーム全体で共通する値（現在の時刻など）
+    // - アプリの存続期間全体で共通する値（ユーザーの設定など）
+    // といった、共通する値を伝えるのに便利
+    //
+
+    // ユニフォームバッファを作成する
+    let uniform_buffer =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Grid uniforms"),
+        contents: &[GRID_SIZE, GRID_SIZE],
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+      });
 
     // シェーダーをコンパイルする
     // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
