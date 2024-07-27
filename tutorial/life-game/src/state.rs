@@ -52,6 +52,15 @@ impl<'w> State<'w> {
         usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
       });
 
+    // シェーダーをコンパイルする
+    // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
+    // ※）必要に応じて、頂点シェーダーとフラグメントシェーダーで別々のシェーダーモジュールを作成することもできる
+    // - たとえば頂点シェーダーは同じで、複数の異なるフラグメント シェーダーを使用したい場合など
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+      label: Some("Cell shader"),
+      source: wgpu::ShaderSource::Wgsl(include_str!("shader/cell.wgsl").into()),
+    });
+
     Self {
       window,
       size,
