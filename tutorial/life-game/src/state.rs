@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
+use wgpu::util::DeviceExt;
 use winit::{dpi::PhysicalSize, window::Window};
+
+use crate::vertex::{Vertex, VERTICES};
 
 pub struct State<'w> {
   window: Arc<Window>,
@@ -9,6 +12,9 @@ pub struct State<'w> {
   device: wgpu::Device,
   queue: wgpu::Queue,
   config: wgpu::SurfaceConfiguration,
+  render_pipeline: wgpu::RenderPipeline,
+  vertex_buffer: wgpu::Buffer,
+  num_vertices: u32,
 }
 
 impl<'w> State<'w> {
@@ -36,6 +42,125 @@ impl<'w> State<'w> {
     // デバイスで使用するSurfaceの構成
     let config = Self::create_surface_config(size, &surface_caps);
 
+    // 頂点データを保持するためのバッファ
+    let vertex_buffer =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        // 作成するすべてのWebGPUオブジェクトには、オプションでラベルを指定することができる
+        // 問題が発生した場合は、WebGPUが生成するエラーメッセージでこれらのラベルが使用される
+        label: Some("Cell vertices"),
+        // bytemuckを使ってVERTICESを&[u8]としてキャスト
+        contents: bytemuck::cast_slice(VERTICES),
+        // バッファの使用方法を指定する
+        // ここでは、バッファを頂点データとして使用するとともに、データのコピー先としても使用する
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+      });
+    let num_vertices = VERTICES.len() as u32;
+
+    // シェーダーをコンパイルする
+    // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
+    // ※）必要に応じて、頂点シェーダーとフラグメントシェーダーで別々のシェーダーモジュールを作成することもできる
+    // - たとえば頂点シェーダーは同じで、複数の異なるフラグメント シェーダーを使用したい場合など
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+      label: Some("Cell shader"),
+      source: wgpu::ShaderSource::Wgsl(include_str!("shader/main.wgsl").into()),
+    });
+
+    //
+    // シェーダーモジュールは、単独でレンダリングに使用することはできない
+    // RenderPipelineの一部として使用することで、初めてレンダリングを行うことができる
+    //
+    // レンダリングパイプラインでは、
+    // - 使用するシェーダー
+    // - 頂点バッファ内のデータの解釈方法
+    // - レンダリングするジオメトリの種類（線分、点、三角形）
+    // など、ジオメトリをどのように描画するかを制御する
+    //
+    // すべてのオプションを1か所（レンダリングパイプライン）にまとめることで、
+    // 1. 各オプションがパイプラインが使用できるものであるかを作成時に簡単に判断できる
+    // - あらゆるオプションの組み合わせが有効というわけではないので…
+    // - まとめておくことで、後でさまざまなオプションについてチェックする必要がなくなるため、パイプラインでの描画が高速になる
+    // - これは、描画呼び出しのたびに数多くの設定を検証する必要があるWebGLから大きく進化した点
+    // 2. 描画時に1回呼び出すだけでレンダリングパスに対して大量の情報を渡すことができる
+    // - これにより、全体としての呼び出し回数を減らすことができるため、レンダリングをさらに効率化できる
+    //
+
+    // 頂点バッファ以外にどのような種類の入力がパイプラインで必要かを示す
+    // ここでは特に必要なものはない
+    let render_pipeline_layout =
+      device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Cell pipeline layout"),
+        bind_group_layouts: &[],
+        push_constant_ranges: &[],
+      });
+    let render_pipeline =
+      device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Cell pipeline"),
+        layout: Some(&render_pipeline_layout),
+        vertex: wgpu::VertexState {
+          module: &shader,
+          // すべての頂点に対して呼び出される頂点シェーダーのコード内の関数名
+          // @vertexでマークした関数はシェーダー内に複数記述できるが、その中のどれを呼び出すか
+          entry_point: "vs_main",
+          // 頂点シェーダに渡したい頂点の種類（バッファの読み取り方法）を伝える
+          buffers: &[Vertex::layout()],
+          compilation_options: wgpu::PipelineCompilationOptions::default(),
+        },
+        // fragmentは技術的にはオプションなので、Some()でラップする必要がある
+        // fragmentは色データをSurfaceに保存したい場合に必要になる
+        fragment: Some(wgpu::FragmentState {
+          module: &shader,
+          // @fragmentでマークした関数はシェーダー内に複数記述できるが、その中のどれを呼び出すか
+          entry_point: "fs_main",
+          // パイプラインで出力するカラーアタッチメントの詳細
+          // このパイプラインで使用するレンダリングパスのColorAttachmentsで指定するテクスチャと一致している必要がある
+          // 配列として複数指定できるが、今回はSurface用に1つだけ必要
+          targets: &[Some(wgpu::ColorTargetState {
+            // Surfaceと同じフォーマットを使用する
+            format: config.format,
+            // 古いピクセルデータを新しいデータに置き換えるだけでいいと指定
+            blend: Some(wgpu::BlendState::REPLACE),
+            // 赤、青、緑、アルファのすべての色に書き込むようにwgpuに指示
+            write_mask: wgpu::ColorWrites::ALL,
+          })],
+          compilation_options: wgpu::PipelineCompilationOptions::default(),
+        }),
+        // 頂点を三角形に変換する際の解釈方法を記述する
+        primitive: wgpu::PrimitiveState {
+          // PrimitiveTopology::TriangleListを使うと、3つの頂点が1つの三角形に対応することになる
+          topology: wgpu::PrimitiveTopology::TriangleList,
+          strip_index_format: None,
+          // front_faceとcull_modeフィールド
+          // - 与えられた三角形が正面を向いているかどうかを決定する方法をwgpuに伝える
+          // FrontFace::Ccwは、頂点が反時計回りに配置されている場合、三角形が正面を向いていることを意味する
+          front_face: wgpu::FrontFace::Ccw,
+          // 正面を向いていないとみなされた三角形は、CullMode::Backで指定されたようにカリングされる（レンダリングに含まれない）
+          cull_mode: Some(wgpu::Face::Back),
+          polygon_mode: wgpu::PolygonMode::Fill,
+          // Requires Features::DEPTH_CLIP_CONTROL
+          unclipped_depth: false,
+          // Requires Features::CONSERVATIVE_RASTERIZATION
+          conservative: false,
+        },
+        // 今回は深度／ステンシル・バッファは使用しないので、depth_stencilはNoneのままにしておく
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState {
+          // パイプラインが使用するサンプルの数を決定する
+          count: 1,
+          // どのサンプルをアクティブにするかを指定する
+          // 今回はすべてのサンプルを使用する
+          mask: !0, // !はビット単位の否定（NOT演算子）
+          // アンチエイリアシングに関係する
+          // 今回はアンチエイリアシングを取り上げないので、これはfalseのままにしておく
+          alpha_to_coverage_enabled: false,
+        },
+        // レンダーアタッチメントがいくつの配列レイヤーを持つことができるかを示す
+        // 今回は配列テクスチャにレンダリングしないので、Noneに設定する
+        multiview: None,
+        // wgpuにシェーダーのコンパイルデータをキャッシュさせるかどうかを指定する
+        // Androidのビルドターゲットにのみ役に立つ
+        cache: None,
+      });
+
     Self {
       window,
       size,
@@ -43,6 +168,9 @@ impl<'w> State<'w> {
       device,
       queue,
       config,
+      render_pipeline,
+      vertex_buffer,
+      num_vertices,
     }
   }
 
@@ -99,7 +227,7 @@ impl<'w> State<'w> {
     {
       // 各レンダリングパスは、beginRenderPass()の呼び出しで始まる
       // beginRenderPass()では、実行されたすべての描画コマンドの出力を受け取るテクスチャを定義する
-      let _render_pass =
+      let mut render_pass =
         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
           label: Some("Render Pass"),
           // アタッチメントは、複数のテクスチャを使用できる仕組み
@@ -130,6 +258,16 @@ impl<'w> State<'w> {
           timestamp_writes: None,
           occlusion_query_set: None,
         });
+
+      // 描画に使用するパイプラインを指定する
+      // パイプラインには、使用するシェーダー、頂点データのレイアウト、その他関連する状態データが含まれる
+      render_pass.set_pipeline(&self.render_pipeline);
+      // 実際に頂点バッファを設定する
+      // - このバッファは現在のパイプラインのvertex.buffers定義の0番目の要素に相当するため、0を指定して呼び出す
+      // - sliceによってバッファのどの部分を使うかを指定できる（ここでは、バッファ全体を指定）
+      render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+      // VERTICESで指定された頂点数の頂点と1つのインスタンスで何かを描くようにwgpuに指示する
+      render_pass.draw(0..self.num_vertices, 0..1);
     }
 
     //
