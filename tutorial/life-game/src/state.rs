@@ -82,16 +82,16 @@ impl<'w> State<'w> {
 
     // 頂点バッファ以外にどのような種類の入力がパイプラインで必要かを示す
     // ここでは特に必要なものはない
-    let pipeline_layout =
+    let render_pipeline_layout =
       device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Cell pipeline layout"),
         bind_group_layouts: &[],
         push_constant_ranges: &[],
       });
-    let pipeline =
+    let render_pipeline =
       device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("Cell pipeline"),
-        layout: Some(&pipeline_layout),
+        layout: Some(&render_pipeline_layout),
         vertex: wgpu::VertexState {
           module: &shader,
           // すべての頂点に対して呼び出される頂点シェーダーのコード内の関数名
