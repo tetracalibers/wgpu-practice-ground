@@ -62,7 +62,7 @@ impl<'w> State<'w> {
     // - たとえば頂点シェーダーは同じで、複数の異なるフラグメント シェーダーを使用したい場合など
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
       label: Some("Cell shader"),
-      source: wgpu::ShaderSource::Wgsl(include_str!("shader/cell.wgsl").into()),
+      source: wgpu::ShaderSource::Wgsl(include_str!("shader/main.wgsl").into()),
     });
 
     //
