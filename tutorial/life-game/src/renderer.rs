@@ -182,12 +182,13 @@ impl Renderer {
     // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
     // ※）必要に応じて、頂点シェーダーとフラグメントシェーダーで別々のシェーダーモジュールを作成することもできる
     // - たとえば頂点シェーダーは同じで、複数の異なるフラグメント シェーダーを使用したい場合など
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Cell shader"),
-      source: wgpu::ShaderSource::Wgsl(
-        include_str!("shader/render.wgsl").into(),
-      ),
-    });
+    let render_shader =
+      device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Cell shader"),
+        source: wgpu::ShaderSource::Wgsl(
+          include_str!("shader/render.wgsl").into(),
+        ),
+      });
 
     //
     // シェーダーモジュールは、単独でレンダリングに使用することはできない
@@ -221,7 +222,7 @@ impl Renderer {
         label: Some("Cell pipeline"),
         layout: Some(&render_pipeline_layout),
         vertex: wgpu::VertexState {
-          module: &shader,
+          module: &render_shader,
           // すべての頂点に対して呼び出される頂点シェーダーのコード内の関数名
           // @vertexでマークした関数はシェーダー内に複数記述できるが、その中のどれを呼び出すか
           entry_point: "vs_main",
@@ -232,7 +233,7 @@ impl Renderer {
         // fragmentは技術的にはオプションなので、Some()でラップする必要がある
         // fragmentは色データをSurfaceに保存したい場合に必要になる
         fragment: Some(wgpu::FragmentState {
-          module: &shader,
+          module: &render_shader,
           // @fragmentでマークした関数はシェーダー内に複数記述できるが、その中のどれを呼び出すか
           entry_point: "fs_main",
           // パイプラインで出力するカラーアタッチメントの詳細
