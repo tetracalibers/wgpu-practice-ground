@@ -110,5 +110,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 //
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
-  return vec4f(in.cell, 0, 1); // (Red, Green, Blue, Alpha)
+  // セルの値は、それぞれの軸で 0 ~ GRID_SIZE の範囲
+  // 最初の行および列で赤または緑のカラーチャネルの上限である1に達してしまい、それ以降のすべてのセルは同じ値に切り詰められてしまう
+  // これを回避するため、gridで除算することで、0 ~ 1 の範囲に収める
+  return vec4f(in.cell / grid, 0, 1); // (Red, Green, Blue, Alpha)
 }

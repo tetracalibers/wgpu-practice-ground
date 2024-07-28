@@ -101,8 +101,8 @@ impl<'w> State<'w> {
         entries: &[wgpu::BindGroupLayoutEntry {
           // シェーダーで入力した@binding()の値に対応する
           binding: 0,
-          // 頂点シェーダからのみ見える
-          visibility: wgpu::ShaderStages::VERTEX,
+          // 頂点シェーダとフラグメントシェーダから見えるようにする
+          visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
           ty: wgpu::BindingType::Buffer {
             ty: wgpu::BufferBindingType::Uniform,
             // バッファ内のデータの位置が変わる可能性があることを意味する
