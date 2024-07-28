@@ -19,7 +19,7 @@ pub struct State<'w> {
   render_pipeline: wgpu::RenderPipeline,
   vertex_buffer: wgpu::Buffer,
   num_vertices: u32,
-  uniform_bind_group: wgpu::BindGroup,
+  bind_group: wgpu::BindGroup,
   num_instances: u32,
 }
 
@@ -86,8 +86,45 @@ impl<'w> State<'w> {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
+    let grid_size = GRID_SIZE as u32;
+    let num_instances = grid_size * grid_size;
+
     //
-    // シェーダーでユニフォームを宣言しても、それだけでは作成したバッファとは接続されない
+    // GPUに保存されたなんらかの状態に基づいて、グリッド上のどのセルをレンダリングするかを制御する必要がある
+    // ライフゲームのシミュレーションは、GPUのコンピューティングシェーダーで行うため、ストレージバッファを使用する
+    //
+    // ユニフォームバッファは、
+    // - サイズに制限がある
+    // - 動的サイズの配列をサポートしていない（シェーダーで配列サイズを指定する必要がある）
+    // - コンピューティング シェーダーでは書き込むことができない
+    //
+    // ストレージバッファは、一般的なメモリのように利用できる汎用バッファ
+    // - コンピューティング シェーダーで読み書きできる
+    // - 頂点シェーダーで読み取ることができる
+    // - 非常に大きなサイズにすることができる
+    // - シェーダーで特定のサイズを宣言する必要がない
+    //
+    // 補足）パフォーマンスについて
+    // ユニフォームバッファは、多くの場合、ストレージバッファよりも高速に更新や読み取りができるよう、GPUで特別に扱われる
+    // そのため、頻繁に更新が発生する可能性のある小さなサイズのデータであれば（3D アプリケーションのモデル、ビュー、射影行列など）、一般的にユニフォームバッファの方が高いパフォーマンスを実現できる
+    //
+
+    // セルの状態
+    // 3つごとにセルを有効にする
+    let cell_active_flags: Vec<u32> = (0..grid_size * grid_size)
+      .map(|i| if i % 3 == 0 { 1 } else { 0 })
+      .collect();
+
+    // ストレージバッファを使用してセルの状態を保存する
+    let cell_state_storage =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Cell state"),
+        contents: bytemuck::cast_slice(cell_active_flags.as_slice()),
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+      });
+
+    //
+    // シェーダーでユニフォームやストレージバッファを宣言しても、それだけでは作成したバッファとは接続されない
     // 接続するためには、バインドグループを作成して、設定する必要がある
     //
     // バインドグループとは、シェーダーにも同時にアクセスできるようにするリソースのコレクション
@@ -95,41 +132,58 @@ impl<'w> State<'w> {
     //
 
     // BindGroupとBindGroupLayoutが分かれているのは、同じBindGroupLayoutを共有していれば、その場でBindGroupを入れ替えられるから
-    let uniform_bind_group_layout =
+    let bind_group_layout =
       device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("Cell renderer bind group layout"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-          // シェーダーで入力した@binding()の値に対応する
-          binding: 0,
-          // 頂点シェーダとフラグメントシェーダから見えるようにする
-          visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-          ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            // バッファ内のデータの位置が変わる可能性があることを意味する
-            // これは、サイズが異なる複数のデータセットを1つのバッファに格納する場合に当てはまる
-            // これをtrueに設定すると、後でオフセットを指定する必要がある
-            has_dynamic_offset: false,
-            // バッファの最小サイズを指定する
-            min_binding_size: None,
+        // シェーダーのコード上で同じ@groupに属しているものは、同じバインドグループに追加する
+        entries: &[
+          // ユニフォームバッファ
+          wgpu::BindGroupLayoutEntry {
+            // シェーダーで入力した@binding()の値に対応する
+            binding: 0,
+            // 頂点シェーダとフラグメントシェーダから見えるようにする
+            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+              ty: wgpu::BufferBindingType::Uniform,
+              // バッファ内のデータの位置が変わる可能性があることを意味する
+              // これは、サイズが異なる複数のデータセットを1つのバッファに格納する場合に当てはまる
+              // これをtrueに設定すると、後でオフセットを指定する必要がある
+              has_dynamic_offset: false,
+              // バッファの最小サイズを指定する
+              min_binding_size: None,
+            },
+            count: None,
           },
-          count: None,
-        }],
+          // ストレージバッファ
+          wgpu::BindGroupLayoutEntry {
+            binding: 1,
+            visibility: wgpu::ShaderStages::VERTEX,
+            ty: wgpu::BindingType::Buffer {
+              ty: wgpu::BufferBindingType::Storage { read_only: true },
+              has_dynamic_offset: false,
+              min_binding_size: None,
+            },
+            count: None,
+          },
+        ],
       });
-    let uniform_bind_group =
-      device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Cell renderer bind group"),
-        layout: &uniform_bind_group_layout,
-        entries: &[wgpu::BindGroupEntry {
+    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+      label: Some("Cell renderer bind group"),
+      layout: &bind_group_layout,
+      entries: &[
+        wgpu::BindGroupEntry {
           binding: 0,
           // 指定したバインディングインデックスの変数に公開する実際のリソース
           // - バインドグループがポイントするリソースを作成後に変更することはできないが、これらのリソースの内容は変更できる
           // - たとえば、ユニフォームバッファを変更して新しいグリッドサイズを格納すると、変更後は、このバインドグループを使用する描画呼び出しで、その変更内容が反映される
           resource: uniform_buffer.as_entire_binding(),
-        }],
-      });
-
-    let grid_size = GRID_SIZE as u32;
-    let num_instances = grid_size * grid_size;
+        },
+        wgpu::BindGroupEntry {
+          binding: 1,
+          resource: cell_state_storage.as_entire_binding(),
+        },
+      ],
+    });
 
     // シェーダーをコンパイルする
     // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
@@ -164,7 +218,7 @@ impl<'w> State<'w> {
       device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Cell pipeline layout"),
         // パイプラインが使用できるBindGroupLayoutのリスト
-        bind_group_layouts: &[&uniform_bind_group_layout],
+        bind_group_layouts: &[&bind_group_layout],
         push_constant_ranges: &[],
       });
     let render_pipeline =
@@ -246,7 +300,7 @@ impl<'w> State<'w> {
       render_pipeline,
       vertex_buffer,
       num_vertices,
-      uniform_bind_group,
+      bind_group,
       num_instances,
     }
   }
@@ -342,7 +396,7 @@ impl<'w> State<'w> {
       // バインドグループを使用するようWebGPUに伝える
       // - 1つ目の引数として渡される0は、シェーダーのコードの@group(0)に対応する
       // - ここでは、@group(0)に属する各@bindingで、このバインドグループのリソースを使用すると指定している
-      render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+      render_pass.set_bind_group(0, &self.bind_group, &[]);
       // 実際に頂点バッファを設定する
       // - このバッファは現在のパイプラインのvertex.buffers定義の0番目の要素に相当するため、0を指定して呼び出す
       // - sliceによってバッファのどの部分を使うかを指定できる（ここでは、バッファ全体を指定）
