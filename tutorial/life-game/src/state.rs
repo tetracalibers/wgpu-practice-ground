@@ -348,6 +348,9 @@ impl<'w> State<'w> {
       // - sliceによってバッファのどの部分を使うかを指定できる（ここでは、バッファ全体を指定）
       render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
       // VERTICESで指定された頂点数の頂点をnum_instances回描くようにwgpuに指示する
+      // - インスタンス化を使用すると、drawを1回呼び出すだけで、同じジオメトリの複数のコピーを描画するようにGPUに対して指示できる
+      // - すべてのコピーに対して毎回drawを呼び出すよりもはるかに高速
+      // - ジオメトリの各コピーをインスタンスと呼ぶ
       render_pass.draw(0..self.num_vertices, 0..self.num_instances);
     }
 

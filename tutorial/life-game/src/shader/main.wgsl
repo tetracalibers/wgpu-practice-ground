@@ -40,6 +40,10 @@ struct VertexOutput {
 // どのステージのシェーダーなのかを示すため、先頭に@vertex属性を指定する必要がある
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
+  //
+  // すべての正方形が同じ場所に描画されてしまわないように、インスタンスごとにジオメトリの位置を再配置する
+  //
+  
   // instance_indexをfloat値にキャスト
   // この値は各正方形について 0, 1, 2, ... 15 となる
   let i = f32(in.instance);
