@@ -74,14 +74,14 @@ fn vs_main(in: VertexInput) -> VertexOutput {
   
   // セルのアクティブ状態を問い合わせる
   // 状態はストレージバッファに1次元配列として保存されているので、instance_indexを使用して現在のセルの値を検索できる
-  let active = f32(cell_state[instance]);
+  let state = f32(cell_state[instance]);
   
   // グリッドの1単位（キャンバスのgrid分の1）
   // - キャンバスの座標は-1から1の2単位にわたっている
   // - キャンバスのgrid分の1だけ頂点を移動する場合、0.5単位の移動が必要になるので、2倍する
   let cell_offset = cell / grid * 2;
   
-  // 1. 状態が非アクティブだった場合にセルを非表示にするため、activeを乗算
+  // 1. 状態が非アクティブだった場合にセルを非表示にするため、stateを乗算
   // - 1倍にスケーリングするとジオメトリはそのまま
   // - 0倍にスケーリングするとジオメトリは点となり、GPUによって破棄される
   // 2. すべての頂点を（クリップ空間のサイズの半分にあたる）1ずつ上と右に移動してから、グリッドサイズで除算する
@@ -89,7 +89,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
   // 3. 左下を(0, 0)としたいので、ジオメトリの位置を(-1, -1)だけ平行移動
   // - キャンバスの座標系では中央が(0, 0)で、左下が(-1, -1)となっている
   // 4. 各セルに対して、グリッドの1単位（cell_offset）だけ正方形を動かす
-  let grid_pos = (in.pos * active + 1) / grid - 1 + cell_offset;
+  let grid_pos = (in.pos * state + 1) / grid - 1 + cell_offset;
   
   // varは可変、letは不変
   var output: VertexOutput;
