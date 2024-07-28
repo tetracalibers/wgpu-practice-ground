@@ -1,4 +1,5 @@
 mod app;
+mod gif;
 mod renderer;
 mod state;
 mod vertex;
@@ -17,4 +18,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
   event_loop.run_app(&mut app)?;
 
   Ok(())
+}
+
+pub fn export_gif() {
+  env_logger::init();
+
+  pollster::block_on(gif::export());
 }
