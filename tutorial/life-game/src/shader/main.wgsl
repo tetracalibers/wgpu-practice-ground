@@ -18,22 +18,23 @@
 // 各シェーダーの呼び出しでは、一度に1つの頂点のデータのみを参照でき、1つの頂点の値のみを出力できる
 //
 
-//
-// ## 宣言
-// - 頂点シェーダー関数には任意の名前を付けることができる
-// - どのステージのシェーダーなのかを示すため、先頭に@vertex属性を指定する必要がある
-//
-// ## 返り値
-// - 頂点シェーダーでは、少なくともクリップ空間で処理される頂点の最終的な位置を返す必要がある
-// - 返される値が必須の位置であることを示すには、@builtin(position)属性でマークする
-//
-// ## 引数
-// 作成したバッファのデータを利用するためには、
-// 1. 関数で@location()属性を使用して引数を宣言する（shader_locationと対応）
-// 2. VertexBufferLayoutで記述したものに一致する型を指定する（formatと対応）
-//
+struct VertexInput {
+  // 作成したバッファのデータを利用するためには、
+  // 1. @location()属性を使用して引数を宣言する（shader_locationと対応）
+  // 2. VertexBufferLayoutで記述したものに一致する型を指定する（formatと対応）
+  @location(0) pos: vec2f,
+};
+
+struct VertexOutput {
+  // 頂点シェーダーでは、少なくともクリップ空間で処理される頂点の最終的な位置を返す必要がある
+  // 返される値が必須の位置であることを示すには、@builtin(position)属性でマークする
+  @builtin(position) pos: vec4f,
+}
+
+// 頂点シェーダー関数には任意の名前を付けることができる
+// どのステージのシェーダーなのかを示すため、先頭に@vertex属性を指定する必要がある
 @vertex
-fn vs_main(@location(0) pos: vec2f) -> @builtin(position) vec4f {
+fn vs_main(in: VertexInput) -> VertexOutput {
   // 正方形を表示するセル
   // この値を変えることで、正方形を表示するセルを変更できる
   let cell = vec2f(1, 1);
@@ -48,9 +49,13 @@ fn vs_main(@location(0) pos: vec2f) -> @builtin(position) vec4f {
   // 2. 左下を(0, 0)としたいので、ジオメトリの位置を(-1, -1)だけ平行移動
   // - キャンバスの座標系では中央が(0, 0)で、左下が(-1, -1)となっている
   // 3. 各セルに対して、グリッドの1単位（cell_offset）だけ正方形を動かす
-  let grid_pos = (pos + 1) / grid - 1 + cell_offset;
+  let grid_pos = (in.pos + 1) / grid - 1 + cell_offset;
   
-  return vec4f(grid_pos, 0, 1);
+  // varは可変、letは不変
+  var output: VertexOutput;
+  output.pos = vec4f(grid_pos, 0, 1);
+  
+  return output;
 }
 
 //
