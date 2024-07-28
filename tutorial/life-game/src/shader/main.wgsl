@@ -74,7 +74,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
   
   // セルのアクティブ状態を問い合わせる
   // 状態はストレージバッファに1次元配列として保存されているので、instance_indexを使用して現在のセルの値を検索できる
-  let state = f32(cell_state[instance]);
+  let state = f32(cell_state[in.instance]);
   
   // グリッドの1単位（キャンバスのgrid分の1）
   // - キャンバスの座標は-1から1の2単位にわたっている
