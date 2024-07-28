@@ -6,7 +6,8 @@ use winit::{dpi::PhysicalSize, window::Window};
 use crate::vertex::{Vertex, VERTICES};
 
 // グリッドの縦方向と横方向にそれぞれいくつのセルが存在するか
-const GRID_SIZE: u32 = 4;
+// 整数値で十分だが、シェーダー側でのキャストが面倒なので最初から浮動小数点値で定義
+const GRID_SIZE: f32 = 4.0;
 
 pub struct State<'w> {
   window: Arc<Window>,
