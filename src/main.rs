@@ -32,6 +32,9 @@ fn main() {
     "tutorial/life-game" => {
       life_game::run().unwrap();
     }
+    "export-gif:tutorial/life-game" => {
+      life_game::export_gif();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
