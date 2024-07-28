@@ -34,6 +34,10 @@ struct VertexOutput {
   // 頂点シェーダーでは、少なくともクリップ空間で処理される頂点の最終的な位置を返す必要がある
   // 返される値が必須の位置であることを示すには、@builtin(position)属性でマークする
   @builtin(position) pos: vec4f,
+  // 頂点とフラグメントのステージ間でデータを受け渡すには、
+  // 1. 任意の@locationを使用して@vertex関数の出力に含める
+  // 2. @fragment関数で、同じ@locationを使用して引数を追加し、値を受け取る
+  @location(0) cell: vec2f,
 }
 
 // 頂点シェーダー関数には任意の名前を付けることができる
@@ -81,6 +85,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
   // varは可変、letは不変
   var output: VertexOutput;
   output.pos = vec4f(grid_pos, 0, 1);
+  output.cell = cell;
   
   return output;
 }
@@ -104,6 +109,6 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 // - 返された色がbegin_render_pass呼び出しのどのColorAttachmentに書き込まれるかを示すため、戻り値には@location属性を指定する必要がある
 //
 @fragment
-fn fs_main() -> @location(0) vec4f {
-  return vec4f(1, 0, 0, 1); // (Red, Green, Blue, Alpha)
+fn fs_main(in: VertexOutput) -> @location(0) vec4f {
+  return vec4f(in.cell, 0, 1); // (Red, Green, Blue, Alpha)
 }
