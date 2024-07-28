@@ -34,6 +34,10 @@ struct VertexOutput {
   // 頂点シェーダーでは、少なくともクリップ空間で処理される頂点の最終的な位置を返す必要がある
   // 返される値が必須の位置であることを示すには、@builtin(position)属性でマークする
   @builtin(position) pos: vec4f,
+  // 頂点とフラグメントのステージ間でデータを受け渡すには、
+  // 1. 任意の@locationを使用して@vertex関数の出力に含める
+  // 2. @fragment関数で、同じ@locationを使用して引数を追加し、値を受け取る
+  @location(0) cell: vec2f,
 }
 
 // 頂点シェーダー関数には任意の名前を付けることができる
@@ -81,6 +85,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
   // varは可変、letは不変
   var output: VertexOutput;
   output.pos = vec4f(grid_pos, 0, 1);
+  output.cell = cell;
   
   return output;
 }
@@ -104,6 +109,14 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 // - 返された色がbegin_render_pass呼び出しのどのColorAttachmentに書き込まれるかを示すため、戻り値には@location属性を指定する必要がある
 //
 @fragment
-fn fs_main() -> @location(0) vec4f {
-  return vec4f(1, 0, 0, 1); // (Red, Green, Blue, Alpha)
+fn fs_main(in: VertexOutput) -> @location(0) vec4f {
+  // セルの値は、それぞれの軸で 0 ~ GRID_SIZE の範囲
+  // 最初の行および列で赤または緑のカラーチャネルの上限である1に達してしまい、それ以降のすべてのセルは同じ値に切り詰められてしまう
+  // これを回避するため、gridで除算することで、0 ~ 1 の範囲に収める
+  let rg = in.cell / grid;
+  
+  // 左下隅ではグリッドが黒くなり、暗く見えてしまうのを回避するため、青チャネルを調整して明るくする
+  // 他の色が最も暗くなる場所で青色を最も明るくし、他の色の強度が高くなるにつれて青色が暗くなるように
+  // 青色のチャネルを、最大値1からセルの他のいずれかのカラーチャネルの値を減算した値とする
+  return vec4f(rg, 1 - rg.r, 1); // (Red, Green, Blue, Alpha)
 }
