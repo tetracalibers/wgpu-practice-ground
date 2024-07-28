@@ -1,4 +1,5 @@
 mod app;
+mod renderer;
 mod state;
 mod vertex;
 
