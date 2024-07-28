@@ -23,6 +23,11 @@ struct VertexInput {
   // 1. @location()属性を使用して引数を宣言する（shader_locationと対応）
   // 2. VertexBufferLayoutで記述したものに一致する型を指定する（formatと対応）
   @location(0) pos: vec2f,
+  // instance_index
+  // - WGSLの組み込み値（WebGPU によって自動的に計算される値）
+  // - この値は、同じインスタンスとして処理されるすべての頂点で同じとなる
+  // - 頂点バッファの各位置について、instance_indexの値が0に設定された状態で頂点シェーダーが6回、instance_indexの値が1に設定された状態で6回、…というように呼び出される
+  @builtin(instance_index) instance: u32,
 };
 
 struct VertexOutput {
@@ -35,9 +40,27 @@ struct VertexOutput {
 // どのステージのシェーダーなのかを示すため、先頭に@vertex属性を指定する必要がある
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
+  // instance_indexをfloat値にキャスト
+  // この値は各正方形について 0, 1, 2, ... 15 となる
+  let i = f32(in.instance);
+  
+  // [0, 15]の値を取りうるiをそのまま使うと、最初の4つしかキャンバス上に収まらない
+  // x は iをgrid.xで割った余りとすることで、[0, grid.x]範囲内の値を繰り返すようにする
+  // x が [0, grid.x] を一周するたびに、yをインクリメントしたい
+  // y は [0, 15] のうち、今何周目かを求めたものとする
+  // example:
+  // i = 0 の時、(0, 0)のセルに表示される
+  // i = 3 の時、(3, 0)のセルに表示される
+  // i = 4 の時、(0, 1)のセルに表示される
+  // i = 7 の時、(3, 1)のセルに表示される
+  // ...
+  let cell_x = i % grid.x;
+  let cell_y = floor(i / grid.y);
+  
   // 正方形を表示するセル
   // この値を変えることで、正方形を表示するセルを変更できる
-  let cell = vec2f(1, 1);
+  // instance_indexを使っているので、自動的に各正方形が異なるセルに表示される
+  let cell = vec2f(cell_x, cell_y);
   
   // グリッドの1単位（キャンバスのgrid分の1）
   // - キャンバスの座標は-1から1の2単位にわたっている

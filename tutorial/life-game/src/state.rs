@@ -20,6 +20,7 @@ pub struct State<'w> {
   vertex_buffer: wgpu::Buffer,
   num_vertices: u32,
   uniform_bind_group: wgpu::BindGroup,
+  num_instances: u32,
 }
 
 impl<'w> State<'w> {
@@ -126,6 +127,9 @@ impl<'w> State<'w> {
           resource: uniform_buffer.as_entire_binding(),
         }],
       });
+
+    let grid_size = GRID_SIZE as u32;
+    let num_instances = grid_size * grid_size;
 
     // シェーダーをコンパイルする
     // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
@@ -243,6 +247,7 @@ impl<'w> State<'w> {
       vertex_buffer,
       num_vertices,
       uniform_bind_group,
+      num_instances,
     }
   }
 
@@ -342,8 +347,8 @@ impl<'w> State<'w> {
       // - このバッファは現在のパイプラインのvertex.buffers定義の0番目の要素に相当するため、0を指定して呼び出す
       // - sliceによってバッファのどの部分を使うかを指定できる（ここでは、バッファ全体を指定）
       render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-      // VERTICESで指定された頂点数の頂点と1つのインスタンスで何かを描くようにwgpuに指示する
-      render_pass.draw(0..self.num_vertices, 0..1);
+      // VERTICESで指定された頂点数の頂点をnum_instances回描くようにwgpuに指示する
+      render_pass.draw(0..self.num_vertices, 0..self.num_instances);
     }
 
     //
