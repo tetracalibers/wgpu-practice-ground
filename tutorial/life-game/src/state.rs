@@ -19,8 +19,9 @@ pub struct State<'w> {
   render_pipeline: wgpu::RenderPipeline,
   vertex_buffer: wgpu::Buffer,
   num_vertices: u32,
-  bind_group: wgpu::BindGroup,
+  bind_groups: Vec<wgpu::BindGroup>,
   num_instances: u32,
+  step: usize,
 }
 
 impl<'w> State<'w> {
@@ -109,17 +110,24 @@ impl<'w> State<'w> {
     // そのため、頻繁に更新が発生する可能性のある小さなサイズのデータであれば（3D アプリケーションのモデル、ビュー、射影行列など）、一般的にユニフォームバッファの方が高いパフォーマンスを実現できる
     //
 
-    // セルの状態
-    // 3つごとにセルを有効にする
-    let cell_active_flags: Vec<u32> = (0..grid_size * grid_size)
+    // セルの状態を2パターン用意
+    let cell_state_1: Vec<u32> = (0..grid_size * grid_size)
       .map(|i| if i % 3 == 0 { 1 } else { 0 })
       .collect();
+    let cell_state_2: Vec<u32> =
+      (0..grid_size * grid_size).map(|i| i as u32 % 2).collect();
 
     // ストレージバッファを使用してセルの状態を保存する
-    let cell_state_storage =
+    let cell_state_storage_1 =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Cell state"),
-        contents: bytemuck::cast_slice(cell_active_flags.as_slice()),
+        label: Some("Cell State 1"),
+        contents: bytemuck::cast_slice(cell_state_1.as_slice()),
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+      });
+    let cell_state_storage_2 =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Cell State 2"),
+        contents: bytemuck::cast_slice(cell_state_2.as_slice()),
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
       });
 
@@ -167,8 +175,8 @@ impl<'w> State<'w> {
           },
         ],
       });
-    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-      label: Some("Cell renderer bind group"),
+    let bind_group_1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+      label: Some("Cell renderer bind group 1"),
       layout: &bind_group_layout,
       entries: &[
         wgpu::BindGroupEntry {
@@ -180,7 +188,21 @@ impl<'w> State<'w> {
         },
         wgpu::BindGroupEntry {
           binding: 1,
-          resource: cell_state_storage.as_entire_binding(),
+          resource: cell_state_storage_1.as_entire_binding(),
+        },
+      ],
+    });
+    let bind_group_2 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+      label: Some("Cell renderer bind group 2"),
+      layout: &bind_group_layout,
+      entries: &[
+        wgpu::BindGroupEntry {
+          binding: 0,
+          resource: uniform_buffer.as_entire_binding(),
+        },
+        wgpu::BindGroupEntry {
+          binding: 1,
+          resource: cell_state_storage_2.as_entire_binding(),
         },
       ],
     });
@@ -300,8 +322,9 @@ impl<'w> State<'w> {
       render_pipeline,
       vertex_buffer,
       num_vertices,
-      bind_group,
+      bind_groups: vec![bind_group_1, bind_group_2],
       num_instances,
+      step: 0,
     }
   }
 
@@ -321,6 +344,10 @@ impl<'w> State<'w> {
       self.config.height = new_size.height;
       self.surface.configure(&self.device, &self.config);
     }
+  }
+
+  pub fn update(&mut self) {
+    self.step += 1;
   }
 
   pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
@@ -396,7 +423,16 @@ impl<'w> State<'w> {
       // バインドグループを使用するようWebGPUに伝える
       // - 1つ目の引数として渡される0は、シェーダーのコードの@group(0)に対応する
       // - ここでは、@group(0)に属する各@bindingで、このバインドグループのリソースを使用すると指定している
-      render_pass.set_bind_group(0, &self.bind_group, &[]);
+      render_pass.set_bind_group(
+        0,
+        // 2つの状態のコピーを交互に使用する
+        // 1. まず一方の状態のコピーから読み込み、他方のコピーに書き出す
+        // 2. 次のステップでは、逆に書き込んだ方のコピーから状態を読み取る
+        // 各ステップで最新バージョンの状態が2つのコピーの間で行ったり来たりする
+        // このような方式は一般的にPing-pongパターンと呼ばれる
+        &self.bind_groups.get(self.step % 2).unwrap(),
+        &[],
+      );
       // 実際に頂点バッファを設定する
       // - このバッファは現在のパイプラインのvertex.buffers定義の0番目の要素に相当するため、0を指定して呼び出す
       // - sliceによってバッファのどの部分を使うかを指定できる（ここでは、バッファ全体を指定）
