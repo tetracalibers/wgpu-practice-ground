@@ -1,6 +1,8 @@
+use std::time;
+
 use winit::{
   application::ApplicationHandler,
-  event::{ElementState, KeyEvent, WindowEvent},
+  event::{ElementState, KeyEvent, StartCause, WindowEvent},
   event_loop::ActiveEventLoop,
   keyboard::{KeyCode, PhysicalKey},
   window::Window,
@@ -8,9 +10,12 @@ use winit::{
 
 use crate::state::State;
 
+const UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
+
 #[derive(Default)]
 pub struct Application<'w> {
   state: Option<State<'w>>,
+  need_redraw: bool,
 }
 
 impl<'w> ApplicationHandler for Application<'w> {
@@ -25,6 +30,7 @@ impl<'w> ApplicationHandler for Application<'w> {
     let state = pollster::block_on(async { State::new(window).await });
 
     self.state = Some(state);
+    self.need_redraw = true;
   }
 
   fn window_event(
@@ -79,9 +85,27 @@ impl<'w> ApplicationHandler for Application<'w> {
     }
   }
 
-  fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-    if let Some(state) = &self.state {
-      state.window().request_redraw();
+  fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
+    if let StartCause::ResumeTimeReached { .. } = cause {
+      self.need_redraw = true;
     }
+  }
+
+  fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    if !self.need_redraw {
+      return;
+    }
+
+    let state = match &mut self.state {
+      Some(state) => state,
+      None => return,
+    };
+
+    state.window().request_redraw();
+    self.need_redraw = false;
+
+    event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
+      time::Instant::now() + UPDATE_INTERVAL,
+    ));
   }
 }
