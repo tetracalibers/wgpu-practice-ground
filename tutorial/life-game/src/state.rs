@@ -86,6 +86,43 @@ impl<'w> State<'w> {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
+    let grid_size = GRID_SIZE as u32;
+    let num_instances = grid_size * grid_size;
+
+    //
+    // GPUに保存されたなんらかの状態に基づいて、グリッド上のどのセルをレンダリングするかを制御する必要がある
+    // ライフゲームのシミュレーションは、GPUのコンピューティングシェーダーで行うため、ストレージバッファを使用する
+    //
+    // ユニフォームバッファは、
+    // - サイズに制限がある
+    // - 動的サイズの配列をサポートしていない（シェーダーで配列サイズを指定する必要がある）
+    // - コンピューティング シェーダーでは書き込むことができない
+    //
+    // ストレージバッファは、一般的なメモリのように利用できる汎用バッファ
+    // - コンピューティング シェーダーで読み書きできる
+    // - 頂点シェーダーで読み取ることができる
+    // - 非常に大きなサイズにすることができる
+    // - シェーダーで特定のサイズを宣言する必要がない
+    //
+    // 補足）パフォーマンスについて
+    // ユニフォームバッファは、多くの場合、ストレージバッファよりも高速に更新や読み取りができるよう、GPUで特別に扱われる
+    // そのため、頻繁に更新が発生する可能性のある小さなサイズのデータであれば（3D アプリケーションのモデル、ビュー、射影行列など）、一般的にユニフォームバッファの方が高いパフォーマンスを実現できる
+    //
+
+    // セルの状態
+    // 3つごとにセルを有効にする
+    let cell_active_flags: Vec<u32> = (0..grid_size * grid_size)
+      .map(|i| if i % 3 == 0 { 1 } else { 0 })
+      .collect();
+
+    // ストレージバッファを使用してセルの状態を保存する
+    let cell_state_storage =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Cell state"),
+        contents: bytemuck::cast_slice(cell_active_flags.as_slice()),
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+      });
+
     //
     // シェーダーでユニフォームを宣言しても、それだけでは作成したバッファとは接続されない
     // 接続するためには、バインドグループを作成して、設定する必要がある
@@ -126,43 +163,6 @@ impl<'w> State<'w> {
           // - たとえば、ユニフォームバッファを変更して新しいグリッドサイズを格納すると、変更後は、このバインドグループを使用する描画呼び出しで、その変更内容が反映される
           resource: uniform_buffer.as_entire_binding(),
         }],
-      });
-
-    let grid_size = GRID_SIZE as u32;
-    let num_instances = grid_size * grid_size;
-
-    //
-    // GPUに保存されたなんらかの状態に基づいて、グリッド上のどのセルをレンダリングするかを制御する必要がある
-    // ライフゲームのシミュレーションは、GPUのコンピューティングシェーダーで行うため、ストレージバッファを使用する
-    //
-    // ユニフォームバッファは、
-    // - サイズに制限がある
-    // - 動的サイズの配列をサポートしていない（シェーダーで配列サイズを指定する必要がある）
-    // - コンピューティング シェーダーでは書き込むことができない
-    //
-    // ストレージバッファは、一般的なメモリのように利用できる汎用バッファ
-    // - コンピューティング シェーダーで読み書きできる
-    // - 頂点シェーダーで読み取ることができる
-    // - 非常に大きなサイズにすることができる
-    // - シェーダーで特定のサイズを宣言する必要がない
-    //
-    // 補足）パフォーマンスについて
-    // ユニフォームバッファは、多くの場合、ストレージバッファよりも高速に更新や読み取りができるよう、GPUで特別に扱われる
-    // そのため、頻繁に更新が発生する可能性のある小さなサイズのデータであれば（3D アプリケーションのモデル、ビュー、射影行列など）、一般的にユニフォームバッファの方が高いパフォーマンスを実現できる
-    //
-
-    // セルの状態
-    // 3つごとにセルを有効にする
-    let cell_active_flags: Vec<u32> = (0..grid_size * grid_size)
-      .map(|i| if i % 3 == 0 { 1 } else { 0 })
-      .collect();
-
-    // ストレージバッファを使用してセルの状態を保存する
-    let cell_state_storage =
-      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Cell state"),
-        contents: bytemuck::cast_slice(cell_active_flags.as_slice()),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
       });
 
     // シェーダーをコンパイルする
