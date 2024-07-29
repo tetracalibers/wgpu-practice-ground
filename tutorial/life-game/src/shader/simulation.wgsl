@@ -57,8 +57,8 @@ fn cell_index(cell: vec2u) -> u32 {
 fn cp_main(in: ComputeInput) {
   // セルが現在アクティブなら非アクティブに、非アクティブならアクティブにする
   if (cell_state_in[cell_index(in.cell.xy)] == 1) {
-    cell_state_out[cell_index(in.cell.xy)] = 0;
+    cell_state_out[cell_index(in.cell.xy)] = u32(0);
   } else {
-    cell_state_out[cell_index(in.cell.xy)] = 1;
+    cell_state_out[cell_index(in.cell.xy)] = u32(1);
   }
 }
