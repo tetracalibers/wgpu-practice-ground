@@ -6,8 +6,12 @@ use crate::vertex::{Vertex, VERTICES};
 // 整数値で十分だが、シェーダー側でのキャストが面倒なので最初から浮動小数点値で定義
 const GRID_SIZE: f32 = 32.0;
 
+// simulation.wgslの@workgroup_sizeと一致させる必要がある
+const WORKGROUP_SIZE: f32 = 8.0;
+
 pub struct Renderer {
   render_pipeline: wgpu::RenderPipeline,
+  simulation_pipeline: wgpu::ComputePipeline,
   vertex_buffer: wgpu::Buffer,
   num_vertices: u32,
   bind_groups: Vec<wgpu::BindGroup>,
@@ -341,6 +345,7 @@ impl Renderer {
 
     Self {
       render_pipeline,
+      simulation_pipeline,
       vertex_buffer,
       num_vertices,
       bind_groups: vec![bind_group_1, bind_group_2],
@@ -359,7 +364,30 @@ impl Renderer {
     view: &wgpu::TextureView,
   ) {
     //
-    // GPUに送信するコマンドはレンダリングに関連したものなので、encoderを使用して、レンダリングパスを開始する
+    // コンピューティング処理はコンピューティングパスで行う
+    //
+
+    let mut compute_pass =
+      encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        label: Some("Compute Pass"),
+        timestamp_writes: None,
+      });
+
+    compute_pass.set_pipeline(&self.simulation_pipeline);
+    compute_pass.set_bind_group(
+      0,
+      &self.bind_groups.get(self.step % 2).unwrap(),
+      &[],
+    );
+
+    // コンピューティングシェーダーに対して処理をディスパッチし、各軸に対して実行するワークグループの数を指定する
+    // - 呼び出し回数ではなく、シェーダーの @workgroup_size で定義したワークグループを実行する個数を指定
+    // - 例えば、グリッド全体をカバーするためにシェーダーを 32x32 回実行したい場合、ワークグループのサイズが 8x8 であれば、4x4 個のワークグループをディスパッチする必要がある（4 * 8 = 32）
+    let workgroup_count = (GRID_SIZE / WORKGROUP_SIZE).ceil() as u32;
+    compute_pass.dispatch_workgroups(workgroup_count, workgroup_count, 1);
+
+    //
+    // レンダリングはレンダリングパスで行う
     // WebGPUにおけるすべての描画操作は、レンダリングパスを通して実行される
     //
 
