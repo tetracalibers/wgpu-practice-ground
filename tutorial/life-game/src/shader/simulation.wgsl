@@ -30,7 +30,7 @@ struct ComputeInput {
 
 // セルのインデックスをストレージバッファの1次元の配列にマッピングする方法が必要
 // これは、1次元のinstance_indexを2次元のグリッドセルにマッピングした頂点シェーダーの処理と逆の処理となる
-fn cellIndex(cell: vec2u) -> u32 {
+fn cell_index(cell: vec2u) -> u32 {
   // セルのY軸の値をグリッドの幅で乗算し、セルのX軸の値を加算
   return cell.y * u32(grid.x) + cell.x;
 }
@@ -56,9 +56,9 @@ fn cellIndex(cell: vec2u) -> u32 {
 @workgroup_size(8, 8) // Zはデフォルトの1
 fn cp_main(in: ComputeInput) {
   // セルが現在アクティブなら非アクティブに、非アクティブならアクティブにする
-  if (cell_state_in[cellIndex(in.cell.xy)] == 1) {
-    cell_state_out[cellIndex(in.cell.xy)] = 0;
+  if (cell_state_in[cell_index(in.cell.xy)] == 1) {
+    cell_state_out[cell_index(in.cell.xy)] = 0;
   } else {
-    cell_state_out[cellIndex(in.cell.xy)] = 1;
+    cell_state_out[cell_index(in.cell.xy)] = 1;
   }
 }
