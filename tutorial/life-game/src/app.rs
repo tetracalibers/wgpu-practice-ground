@@ -63,7 +63,6 @@ impl<'w> ApplicationHandler for Application<'w> {
         state.resize(physical_size);
       }
       WindowEvent::RedrawRequested => {
-        state.update();
         match state.render() {
           Ok(_) => {}
           // Surfaceが失われたり古くなったりした場合は、再構成する

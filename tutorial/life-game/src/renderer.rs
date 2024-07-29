@@ -354,12 +354,8 @@ impl Renderer {
     }
   }
 
-  pub fn update(&mut self) {
-    self.step += 1;
-  }
-
   pub fn draw(
-    &self,
+    &mut self,
     encoder: &mut wgpu::CommandEncoder,
     view: &wgpu::TextureView,
   ) {
@@ -385,6 +381,14 @@ impl Renderer {
     // - 例えば、グリッド全体をカバーするためにシェーダーを 32x32 回実行したい場合、ワークグループのサイズが 8x8 であれば、4x4 個のワークグループをディスパッチする必要がある（4 * 8 = 32）
     let workgroup_count = (GRID_SIZE / WORKGROUP_SIZE).ceil() as u32;
     compute_pass.dispatch_workgroups(workgroup_count, workgroup_count, 1);
+
+    //
+    // コンピューティングパスで生成された最新の結果レンダリングパスですぐに使用できるよう、コンピューティングパスを実行した後で、レンダリングパスを実行する
+    // stepカウントをこれらのパスの間でインクリメントするのもそのため
+    // こうすることで、コンピューティングパイプラインの出力バッファを、レンダリングパイプラインの入力バッファにすることができる
+    //
+
+    self.step += 1;
 
     //
     // レンダリングはレンダリングパスで行う

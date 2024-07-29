@@ -83,7 +83,6 @@ pub async fn export() {
       .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
     // テクスチャに描画する
-    renderer.update();
     renderer.draw(&mut encoder, &texture_view);
 
     // テクスチャの内容をバッファにコピーする
