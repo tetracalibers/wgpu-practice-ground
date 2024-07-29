@@ -116,12 +116,13 @@ impl Renderer {
         label: Some("Cell renderer bind group layout"),
         // シェーダーのコード上で同じ@groupに属しているものは、同じバインドグループに追加する
         entries: &[
-          // ユニフォームバッファ
+          // ユニフォームバッファ（grid）
           wgpu::BindGroupLayoutEntry {
             // シェーダーで入力した@binding()の値に対応する
             binding: 0,
-            // 頂点シェーダとフラグメントシェーダから見えるようにする
-            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+            // 頂点シェーダ、フラグメントシェーダ、コンピュートシェーダーから見えるようにする
+            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT
+              | wgpu::ShaderStages::COMPUTE,
             ty: wgpu::BindingType::Buffer {
               ty: wgpu::BufferBindingType::Uniform,
               // バッファ内のデータの位置が変わる可能性があることを意味する
