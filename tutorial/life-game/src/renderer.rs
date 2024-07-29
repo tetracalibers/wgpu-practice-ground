@@ -189,6 +189,13 @@ impl Renderer {
           include_str!("shader/render.wgsl").into(),
         ),
       });
+    let simulation_shader =
+      device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Game of Life simulation shader"),
+        source: wgpu::ShaderSource::Wgsl(
+          include_str!("shader/simulation.wgsl").into(),
+        ),
+      });
 
     //
     // シェーダーモジュールは、単独でレンダリングに使用することはできない
