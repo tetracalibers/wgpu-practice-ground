@@ -109,17 +109,21 @@ impl Renderer {
     // バインドグループとは、シェーダーにも同時にアクセスできるようにするリソースのコレクション
     // ユニフォームバッファなど、いくつかの種類のバッファのほか、テクスチャやサンプラーなどのその他のリソースを含めることができる
     //
-
     // BindGroupとBindGroupLayoutが分かれているのは、同じBindGroupLayoutを共有していれば、その場でBindGroupを入れ替えられるから
+    // - BindGroupでは、リソース自体を指定する
+    // - BindGroupLayoutでは、エントリがどのような種類のリソースで、どのように使用されるかを記述する
+    //
+
     let bind_group_layout =
       device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("Cell renderer bind group layout"),
         // シェーダーのコード上で同じ@groupに属しているものは、同じバインドグループに追加する
         entries: &[
-          // ユニフォームバッファ（grid）
+          // Grid uniform buffer
           wgpu::BindGroupLayoutEntry {
             // シェーダーで入力した@binding()の値に対応する
             binding: 0,
+            // どのシェーダーステージでこのリソースを使用できるか
             // 頂点シェーダ、フラグメントシェーダ、コンピュートシェーダーから見えるようにする
             visibility: wgpu::ShaderStages::VERTEX_FRAGMENT
               | wgpu::ShaderStages::COMPUTE,
@@ -134,12 +138,24 @@ impl Renderer {
             },
             count: None,
           },
-          // ストレージバッファ
+          // Cell state input buffer
           wgpu::BindGroupLayoutEntry {
             binding: 1,
-            visibility: wgpu::ShaderStages::VERTEX,
+            visibility: wgpu::ShaderStages::VERTEX
+              | wgpu::ShaderStages::COMPUTE,
             ty: wgpu::BindingType::Buffer {
               ty: wgpu::BufferBindingType::Storage { read_only: true },
+              has_dynamic_offset: false,
+              min_binding_size: None,
+            },
+            count: None,
+          },
+          // Cell state output buffer
+          wgpu::BindGroupLayoutEntry {
+            binding: 2,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+              ty: wgpu::BufferBindingType::Storage { read_only: false },
               has_dynamic_offset: false,
               min_binding_size: None,
             },
@@ -158,9 +174,15 @@ impl Renderer {
           // - たとえば、ユニフォームバッファを変更して新しいグリッドサイズを格納すると、変更後は、このバインドグループを使用する描画呼び出しで、その変更内容が反映される
           resource: uniform_buffer.as_entire_binding(),
         },
+        // inputとしてcell_state_storage_1を使う
         wgpu::BindGroupEntry {
           binding: 1,
           resource: cell_state_storage_1.as_entire_binding(),
+        },
+        // outputとしてcell_state_storage_2を使う
+        wgpu::BindGroupEntry {
+          binding: 2,
+          resource: cell_state_storage_2.as_entire_binding(),
         },
       ],
     });
@@ -172,9 +194,15 @@ impl Renderer {
           binding: 0,
           resource: uniform_buffer.as_entire_binding(),
         },
+        // inputとしてcell_state_storage_2を使う
         wgpu::BindGroupEntry {
           binding: 1,
           resource: cell_state_storage_2.as_entire_binding(),
+        },
+        // outputとして cell_state_storage_1を使う
+        wgpu::BindGroupEntry {
+          binding: 2,
+          resource: cell_state_storage_1.as_entire_binding(),
         },
       ],
     });
@@ -222,6 +250,7 @@ impl Renderer {
       device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Cell pipeline layout"),
         // パイプラインが使用できるBindGroupLayoutのリスト
+        // 配列内のバインドグループレイアウトの順序は、シェーダーの@group属性と一致している必要がある
         bind_group_layouts: &[&bind_group_layout],
         push_constant_ranges: &[],
       });
