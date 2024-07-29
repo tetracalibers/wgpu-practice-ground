@@ -85,24 +85,22 @@ impl Renderer {
     // そのため、頻繁に更新が発生する可能性のある小さなサイズのデータであれば（3D アプリケーションのモデル、ビュー、射影行列など）、一般的にユニフォームバッファの方が高いパフォーマンスを実現できる
     //
 
-    // セルの状態を2パターン用意
-    let cell_state_1: Vec<u32> = (0..grid_size * grid_size)
+    // セルの状態
+    let cell_state: Vec<u32> = (0..grid_size * grid_size)
       .map(|i| if i % 3 == 0 { 1 } else { 0 })
       .collect();
-    let cell_state_2: Vec<u32> =
-      (0..grid_size * grid_size).map(|i| i as u32 % 2).collect();
 
     // ストレージバッファを使用してセルの状態を保存する
     let cell_state_storage_1 =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Cell State 1"),
-        contents: bytemuck::cast_slice(cell_state_1.as_slice()),
+        contents: bytemuck::cast_slice(cell_state.as_slice()),
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
       });
     let cell_state_storage_2 =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Cell State 2"),
-        contents: bytemuck::cast_slice(cell_state_2.as_slice()),
+        contents: bytemuck::cast_slice(cell_state.as_slice()),
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
       });
 
