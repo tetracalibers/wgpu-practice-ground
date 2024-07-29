@@ -363,24 +363,30 @@ impl Renderer {
     // コンピューティング処理はコンピューティングパスで行う
     //
 
-    let mut compute_pass =
-      encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-        label: Some("Compute Pass"),
-        timestamp_writes: None,
-      });
+    // begin_XXX_pass()はencoderをミュータブルに借用する
+    // このミュータブルな借用を解放するまで、encoderの次の操作を呼び出すことはできない
+    // このブロックは、コードがそのスコープから出たときに、その中の変数をドロップするようにRustに指示する
+    // ※）{}の代わりに、drop(pass)を使っても同じ効果が得られる
+    {
+      let mut compute_pass =
+        encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+          label: Some("Compute Pass"),
+          timestamp_writes: None,
+        });
 
-    compute_pass.set_pipeline(&self.simulation_pipeline);
-    compute_pass.set_bind_group(
-      0,
-      &self.bind_groups.get(self.step % 2).unwrap(),
-      &[],
-    );
+      compute_pass.set_pipeline(&self.simulation_pipeline);
+      compute_pass.set_bind_group(
+        0,
+        &self.bind_groups.get(self.step % 2).unwrap(),
+        &[],
+      );
 
-    // コンピューティングシェーダーに対して処理をディスパッチし、各軸に対して実行するワークグループの数を指定する
-    // - 呼び出し回数ではなく、シェーダーの @workgroup_size で定義したワークグループを実行する個数を指定
-    // - 例えば、グリッド全体をカバーするためにシェーダーを 32x32 回実行したい場合、ワークグループのサイズが 8x8 であれば、4x4 個のワークグループをディスパッチする必要がある（4 * 8 = 32）
-    let workgroup_count = (GRID_SIZE / WORKGROUP_SIZE).ceil() as u32;
-    compute_pass.dispatch_workgroups(workgroup_count, workgroup_count, 1);
+      // コンピューティングシェーダーに対して処理をディスパッチし、各軸に対して実行するワークグループの数を指定する
+      // - 呼び出し回数ではなく、シェーダーの @workgroup_size で定義したワークグループを実行する個数を指定
+      // - 例えば、グリッド全体をカバーするためにシェーダーを 32x32 回実行したい場合、ワークグループのサイズが 8x8 であれば、4x4 個のワークグループをディスパッチする必要がある（4 * 8 = 32）
+      let workgroup_count = (GRID_SIZE / WORKGROUP_SIZE).ceil() as u32;
+      compute_pass.dispatch_workgroups(workgroup_count, workgroup_count, 1);
+    }
 
     //
     // コンピューティングパスで生成された最新の結果レンダリングパスですぐに使用できるよう、コンピューティングパスを実行した後で、レンダリングパスを実行する
