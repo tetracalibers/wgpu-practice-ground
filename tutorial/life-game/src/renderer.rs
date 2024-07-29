@@ -246,7 +246,7 @@ impl Renderer {
     //
 
     // 頂点バッファ以外にどのような種類の入力がパイプラインで必要かを示す
-    let render_pipeline_layout =
+    let pipeline_layout =
       device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Cell pipeline layout"),
         // パイプラインが使用できるBindGroupLayoutのリスト
@@ -254,10 +254,11 @@ impl Renderer {
         bind_group_layouts: &[&bind_group_layout],
         push_constant_ranges: &[],
       });
+
     let render_pipeline =
       device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("Cell pipeline"),
-        layout: Some(&render_pipeline_layout),
+        layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
           module: &render_shader,
           // すべての頂点に対して呼び出される頂点シェーダーのコード内の関数名
@@ -319,6 +320,22 @@ impl Renderer {
         multiview: None,
         // wgpuにシェーダーのコンパイルデータをキャッシュさせるかどうかを指定する
         // Androidのビルドターゲットにのみ役に立つ
+        cache: None,
+      });
+
+    //
+    // 頂点シェーダーとフラグメントシェーダーを使用するためにレンダリングパイプラインが必要であるのと同様に、
+    // コンピューティングシェーダーを使用するためにはコンピューティングパイプラインが必要
+    //
+
+    let simulation_pipeline =
+      device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("Simulation pipeline"),
+        // レンダリングパイプラインとコンピューティングパイプラインの両方で同じバインドグループを使用する
+        layout: Some(&pipeline_layout),
+        module: &simulation_shader,
+        entry_point: "cp_main",
+        compilation_options: wgpu::PipelineCompilationOptions::default(),
         cache: None,
       });
 
