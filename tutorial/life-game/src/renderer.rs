@@ -1,3 +1,4 @@
+use rand::Rng;
 use wgpu::util::DeviceExt;
 
 use crate::vertex::{Vertex, VERTICES};
@@ -86,8 +87,10 @@ impl Renderer {
     //
 
     // セルの状態
+    // ランダムな状態で各セルを開始する
+    let mut rng = rand::thread_rng();
     let cell_state: Vec<u32> = (0..grid_size * grid_size)
-      .map(|i| if i % 3 == 0 { 1 } else { 0 })
+      .map(|_| if rng.gen::<f32>() > 0.6 { 1 } else { 0 })
       .collect();
 
     // ストレージバッファを使用してセルの状態を保存する

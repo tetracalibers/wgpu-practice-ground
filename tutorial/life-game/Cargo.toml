@@ -13,3 +13,4 @@ bytemuck          = { version = "1.16.1", features = ["derive"] }
 futures-intrusive = "0.5.0"
 anyhow            = "1.0.86"
 gif               = "0.13.1"
+rand              = "0.8.5"

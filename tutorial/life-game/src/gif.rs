@@ -2,7 +2,7 @@ use std::{iter, mem};
 
 use crate::renderer::Renderer;
 
-const SCENE_COUNT: usize = 2;
+const SCENE_COUNT: usize = 30;
 
 pub async fn export() {
   let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
