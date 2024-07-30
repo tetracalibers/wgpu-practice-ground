@@ -6,8 +6,12 @@ use crate::vertex::{Vertex, VERTICES};
 // 整数値で十分だが、シェーダー側でのキャストが面倒なので最初から浮動小数点値で定義
 const GRID_SIZE: f32 = 32.0;
 
+// simulation.wgslの@workgroup_sizeと一致させる必要がある
+const WORKGROUP_SIZE: f32 = 8.0;
+
 pub struct Renderer {
   render_pipeline: wgpu::RenderPipeline,
+  simulation_pipeline: wgpu::ComputePipeline,
   vertex_buffer: wgpu::Buffer,
   num_vertices: u32,
   bind_groups: Vec<wgpu::BindGroup>,
@@ -81,24 +85,22 @@ impl Renderer {
     // そのため、頻繁に更新が発生する可能性のある小さなサイズのデータであれば（3D アプリケーションのモデル、ビュー、射影行列など）、一般的にユニフォームバッファの方が高いパフォーマンスを実現できる
     //
 
-    // セルの状態を2パターン用意
-    let cell_state_1: Vec<u32> = (0..grid_size * grid_size)
+    // セルの状態
+    let cell_state: Vec<u32> = (0..grid_size * grid_size)
       .map(|i| if i % 3 == 0 { 1 } else { 0 })
       .collect();
-    let cell_state_2: Vec<u32> =
-      (0..grid_size * grid_size).map(|i| i as u32 % 2).collect();
 
     // ストレージバッファを使用してセルの状態を保存する
     let cell_state_storage_1 =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Cell State 1"),
-        contents: bytemuck::cast_slice(cell_state_1.as_slice()),
+        contents: bytemuck::cast_slice(cell_state.as_slice()),
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
       });
     let cell_state_storage_2 =
       device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Cell State 2"),
-        contents: bytemuck::cast_slice(cell_state_2.as_slice()),
+        contents: bytemuck::cast_slice(cell_state.as_slice()),
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
       });
 
@@ -109,19 +111,24 @@ impl Renderer {
     // バインドグループとは、シェーダーにも同時にアクセスできるようにするリソースのコレクション
     // ユニフォームバッファなど、いくつかの種類のバッファのほか、テクスチャやサンプラーなどのその他のリソースを含めることができる
     //
-
     // BindGroupとBindGroupLayoutが分かれているのは、同じBindGroupLayoutを共有していれば、その場でBindGroupを入れ替えられるから
+    // - BindGroupでは、リソース自体を指定する
+    // - BindGroupLayoutでは、エントリがどのような種類のリソースで、どのように使用されるかを記述する
+    //
+
     let bind_group_layout =
       device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("Cell renderer bind group layout"),
         // シェーダーのコード上で同じ@groupに属しているものは、同じバインドグループに追加する
         entries: &[
-          // ユニフォームバッファ
+          // Grid uniform buffer
           wgpu::BindGroupLayoutEntry {
             // シェーダーで入力した@binding()の値に対応する
             binding: 0,
-            // 頂点シェーダとフラグメントシェーダから見えるようにする
-            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+            // どのシェーダーステージでこのリソースを使用できるか
+            // 頂点シェーダ、フラグメントシェーダ、コンピュートシェーダーから見えるようにする
+            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT
+              | wgpu::ShaderStages::COMPUTE,
             ty: wgpu::BindingType::Buffer {
               ty: wgpu::BufferBindingType::Uniform,
               // バッファ内のデータの位置が変わる可能性があることを意味する
@@ -133,12 +140,24 @@ impl Renderer {
             },
             count: None,
           },
-          // ストレージバッファ
+          // Cell state input buffer
           wgpu::BindGroupLayoutEntry {
             binding: 1,
-            visibility: wgpu::ShaderStages::VERTEX,
+            visibility: wgpu::ShaderStages::VERTEX
+              | wgpu::ShaderStages::COMPUTE,
             ty: wgpu::BindingType::Buffer {
               ty: wgpu::BufferBindingType::Storage { read_only: true },
+              has_dynamic_offset: false,
+              min_binding_size: None,
+            },
+            count: None,
+          },
+          // Cell state output buffer
+          wgpu::BindGroupLayoutEntry {
+            binding: 2,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+              ty: wgpu::BufferBindingType::Storage { read_only: false },
               has_dynamic_offset: false,
               min_binding_size: None,
             },
@@ -157,9 +176,15 @@ impl Renderer {
           // - たとえば、ユニフォームバッファを変更して新しいグリッドサイズを格納すると、変更後は、このバインドグループを使用する描画呼び出しで、その変更内容が反映される
           resource: uniform_buffer.as_entire_binding(),
         },
+        // inputとしてcell_state_storage_1を使う
         wgpu::BindGroupEntry {
           binding: 1,
           resource: cell_state_storage_1.as_entire_binding(),
+        },
+        // outputとしてcell_state_storage_2を使う
+        wgpu::BindGroupEntry {
+          binding: 2,
+          resource: cell_state_storage_2.as_entire_binding(),
         },
       ],
     });
@@ -171,9 +196,15 @@ impl Renderer {
           binding: 0,
           resource: uniform_buffer.as_entire_binding(),
         },
+        // inputとしてcell_state_storage_2を使う
         wgpu::BindGroupEntry {
           binding: 1,
           resource: cell_state_storage_2.as_entire_binding(),
+        },
+        // outputとして cell_state_storage_1を使う
+        wgpu::BindGroupEntry {
+          binding: 2,
+          resource: cell_state_storage_1.as_entire_binding(),
         },
       ],
     });
@@ -182,10 +213,20 @@ impl Renderer {
     // ※）ShaderModuleDescriptorの代わりに、wgpu::include_wgsl!("shader.wgsl")を使用することもできる
     // ※）必要に応じて、頂点シェーダーとフラグメントシェーダーで別々のシェーダーモジュールを作成することもできる
     // - たとえば頂点シェーダーは同じで、複数の異なるフラグメント シェーダーを使用したい場合など
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Cell shader"),
-      source: wgpu::ShaderSource::Wgsl(include_str!("shader/main.wgsl").into()),
-    });
+    let render_shader =
+      device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Cell shader"),
+        source: wgpu::ShaderSource::Wgsl(
+          include_str!("shader/render.wgsl").into(),
+        ),
+      });
+    let simulation_shader =
+      device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Game of Life simulation shader"),
+        source: wgpu::ShaderSource::Wgsl(
+          include_str!("shader/simulation.wgsl").into(),
+        ),
+      });
 
     //
     // シェーダーモジュールは、単独でレンダリングに使用することはできない
@@ -207,19 +248,21 @@ impl Renderer {
     //
 
     // 頂点バッファ以外にどのような種類の入力がパイプラインで必要かを示す
-    let render_pipeline_layout =
+    let pipeline_layout =
       device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Cell pipeline layout"),
         // パイプラインが使用できるBindGroupLayoutのリスト
+        // 配列内のバインドグループレイアウトの順序は、シェーダーの@group属性と一致している必要がある
         bind_group_layouts: &[&bind_group_layout],
         push_constant_ranges: &[],
       });
+
     let render_pipeline =
       device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("Cell pipeline"),
-        layout: Some(&render_pipeline_layout),
+        layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
-          module: &shader,
+          module: &render_shader,
           // すべての頂点に対して呼び出される頂点シェーダーのコード内の関数名
           // @vertexでマークした関数はシェーダー内に複数記述できるが、その中のどれを呼び出すか
           entry_point: "vs_main",
@@ -230,7 +273,7 @@ impl Renderer {
         // fragmentは技術的にはオプションなので、Some()でラップする必要がある
         // fragmentは色データをSurfaceに保存したい場合に必要になる
         fragment: Some(wgpu::FragmentState {
-          module: &shader,
+          module: &render_shader,
           // @fragmentでマークした関数はシェーダー内に複数記述できるが、その中のどれを呼び出すか
           entry_point: "fs_main",
           // パイプラインで出力するカラーアタッチメントの詳細
@@ -282,8 +325,25 @@ impl Renderer {
         cache: None,
       });
 
+    //
+    // 頂点シェーダーとフラグメントシェーダーを使用するためにレンダリングパイプラインが必要であるのと同様に、
+    // コンピューティングシェーダーを使用するためにはコンピューティングパイプラインが必要
+    //
+
+    let simulation_pipeline =
+      device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("Simulation pipeline"),
+        // レンダリングパイプラインとコンピューティングパイプラインの両方で同じバインドグループを使用する
+        layout: Some(&pipeline_layout),
+        module: &simulation_shader,
+        entry_point: "cp_main",
+        compilation_options: wgpu::PipelineCompilationOptions::default(),
+        cache: None,
+      });
+
     Self {
       render_pipeline,
+      simulation_pipeline,
       vertex_buffer,
       num_vertices,
       bind_groups: vec![bind_group_1, bind_group_2],
@@ -292,17 +352,50 @@ impl Renderer {
     }
   }
 
-  pub fn update(&mut self) {
-    self.step += 1;
-  }
-
   pub fn draw(
-    &self,
+    &mut self,
     encoder: &mut wgpu::CommandEncoder,
     view: &wgpu::TextureView,
   ) {
     //
-    // GPUに送信するコマンドはレンダリングに関連したものなので、encoderを使用して、レンダリングパスを開始する
+    // コンピューティング処理はコンピューティングパスで行う
+    //
+
+    // begin_XXX_pass()はencoderをミュータブルに借用する
+    // このミュータブルな借用を解放するまで、encoderの次の操作を呼び出すことはできない
+    // このブロックは、コードがそのスコープから出たときに、その中の変数をドロップするようにRustに指示する
+    // ※）{}の代わりに、drop(pass)を使っても同じ効果が得られる
+    {
+      let mut compute_pass =
+        encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+          label: Some("Compute Pass"),
+          timestamp_writes: None,
+        });
+
+      compute_pass.set_pipeline(&self.simulation_pipeline);
+      compute_pass.set_bind_group(
+        0,
+        &self.bind_groups.get(self.step % 2).unwrap(),
+        &[],
+      );
+
+      // コンピューティングシェーダーに対して処理をディスパッチし、各軸に対して実行するワークグループの数を指定する
+      // - 呼び出し回数ではなく、シェーダーの @workgroup_size で定義したワークグループを実行する個数を指定
+      // - 例えば、グリッド全体をカバーするためにシェーダーを 32x32 回実行したい場合、ワークグループのサイズが 8x8 であれば、4x4 個のワークグループをディスパッチする必要がある（4 * 8 = 32）
+      let workgroup_count = (GRID_SIZE / WORKGROUP_SIZE).ceil() as u32;
+      compute_pass.dispatch_workgroups(workgroup_count, workgroup_count, 1);
+    }
+
+    //
+    // コンピューティングパスで生成された最新の結果レンダリングパスですぐに使用できるよう、コンピューティングパスを実行した後で、レンダリングパスを実行する
+    // stepカウントをこれらのパスの間でインクリメントするのもそのため
+    // こうすることで、コンピューティングパイプラインの出力バッファを、レンダリングパイプラインの入力バッファにすることができる
+    //
+
+    self.step += 1;
+
+    //
+    // レンダリングはレンダリングパスで行う
     // WebGPUにおけるすべての描画操作は、レンダリングパスを通して実行される
     //
 

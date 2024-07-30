@@ -136,11 +136,7 @@ impl<'w> State<'w> {
     }
   }
 
-  pub fn update(&mut self) {
-    self.renderer.update();
-  }
-
-  pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
+  pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
     //
     // 描画先のコンテンツを更新するたびに、get_current_texture()を呼び出してレンダリングパスのためのテクスチャを新たに取得し、新しいコマンドバッファを記録して送信する必要がある
     //
