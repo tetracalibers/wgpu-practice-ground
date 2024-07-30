@@ -10,7 +10,7 @@ use winit::{
 
 use crate::state::State;
 
-const UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
+const UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(150);
 
 #[derive(Default)]
 pub struct Application<'w> {
