@@ -31,8 +31,18 @@ struct ComputeInput {
 // セルのインデックスをストレージバッファの1次元の配列にマッピングする方法が必要
 // これは、1次元のinstance_indexを2次元のグリッドセルにマッピングした頂点シェーダーの処理と逆の処理となる
 fn cell_index(cell: vec2u) -> u32 {
+  // チェック対象のセルがボードの端の外側にある場合、バッファの境界を越えてインデックスにアクセスしてしまう
+  // グリッドの端にあるセルにおいてグリッドの逆側の端にあるセルを隣接セルとして扱う、一種のラップアラウンドによってこの問題を解決する
+  // セルのXとYがグリッドサイズを超えたときにラップアラウンドすると、ストレージバッファの境界を越えたアクセスが発生しなくなる
+  let safe_cell = cell % vec2u(u32(grid.x), u32(grid.y));
+  
   // セルのY軸の値をグリッドの幅で乗算し、セルのX軸の値を加算
-  return cell.y * u32(grid.x) + cell.x;
+  return safe_cell.y * u32(grid.x) + safe_cell.x;
+}
+
+// 特定の座標のcell_state_inの値を返す
+fn cell_active(x: u32, y: u32) -> u32 {
+  return cell_state_in[cell_index(vec2(x, y))];
 }
 
 //
@@ -55,10 +65,37 @@ fn cell_index(cell: vec2u) -> u32 {
 // このシェーダーでは、ワークグループを8 x 8のサイズにする
 @workgroup_size(8, 8) // Zはデフォルトの1
 fn cp_main(in: ComputeInput) {
-  // セルが現在アクティブなら非アクティブに、非アクティブならアクティブにする
-  if (cell_state_in[cell_index(in.cell.xy)] == 1) {
-    cell_state_out[cell_index(in.cell.xy)] = u32(0);
-  } else {
-    cell_state_out[cell_index(in.cell.xy)] = u32(1);
+  let cell = in.cell;
+  
+  // 特定のセルについて、アクティブな隣接セルの数を把握する必要がある
+  // cell_active関数は、セルがアクティブであれば1を返す
+  // 8つすべての隣接セルに対してcell_activeを呼び出し、戻り値を合計すれば、アクティブな隣接セルの数がわかる
+  let active_neighbors
+    = cell_active(cell.x + 1, cell.y + 1)
+    + cell_active(cell.x + 1, cell.y)
+    + cell_active(cell.x + 1, cell.y - 1)
+    + cell_active(cell.x, cell.y - 1)
+    + cell_active(cell.x - 1, cell.y - 1)
+    + cell_active(cell.x - 1, cell.y)
+    + cell_active(cell.x - 1, cell.y + 1)
+    + cell_active(cell.x, cell.y + 1);
+  
+  let i = cell_index(cell.xy);
+  
+  // Conway's game of life rules:
+  // - 隣接セルが2つ未満のセルは、非アクティブとする
+  // - 隣接セルが2つまたは 3 つで、自身がアクティブなセルは、アクティブなままとする
+  // - 隣接セルが3つで、自身が非アクティブなセルは、アクティブとする
+  // - 隣接セルが4つ以上のセルは、非アクティブとする
+  switch active_neighbors {
+    case 2u: {
+      cell_state_out[i] = cell_state_in[i];
+    }
+    case 3u: {
+      cell_state_out[i] = 1u;
+    }
+    default: {
+      cell_state_out[i] = 0u;
+    }
   }
 }
