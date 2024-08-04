@@ -1962,6 +1962,14 @@ dependencies = [
 [[package]]
 name = "rect-renderer"
 version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "log",
+ "pollster",
+ "wgpu",
+ "winit",
+]
 
 [[package]]
 name = "redox_syscall"
