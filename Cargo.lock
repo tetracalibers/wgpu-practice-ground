@@ -2767,6 +2767,7 @@ dependencies = [
  "ch05-indice",
  "ch06-texture",
  "life-game",
+ "rect-renderer",
 ]
 
 [[package]]
