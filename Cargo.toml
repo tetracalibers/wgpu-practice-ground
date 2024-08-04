@@ -10,6 +10,7 @@ ch03-pipeline = { path = "./tutorial/ch03-pipeline" }
 ch04-buffer   = { path = "./tutorial/ch04-buffer" }
 ch05-indice   = { path = "./tutorial/ch05-indice" }
 ch06-texture  = { path = "./tutorial/ch06-texture" }
+life-game     = { path = "./tutorial/life-game" }
 
 [workspace]
 
@@ -20,4 +21,5 @@ members = [
   "tutorial/ch04-buffer",
   "tutorial/ch05-indice",
   "tutorial/ch06-texture",
+  "tutorial/life-game",
 ]

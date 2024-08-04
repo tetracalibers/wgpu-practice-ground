@@ -25,3 +25,11 @@ cargo run -- tutorial/ch05-indice
 ```bash
 cargo run -- tutorial/ch06-texture
 ```
+
+```bash
+cargo run -- tutorial/life-game
+```
+
+```bash
+cargo run -- export-gif:tutorial/life-game
+```
