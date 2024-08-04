@@ -15,6 +15,7 @@ life-game     = { path = "./tutorial/life-game" }
 [workspace]
 
 members = [
+  "prototype/rect-renderer",
   "tutorial/ch01-window",
   "tutorial/ch02-surface",
   "tutorial/ch03-pipeline",
