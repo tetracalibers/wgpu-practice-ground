@@ -6,9 +6,11 @@ use winit::{
   window::{Window, WindowId},
 };
 
+use crate::state::GfxState;
+
 #[derive(Default)]
 pub struct Application {
-  window: Option<Window>,
+  state: Option<GfxState>,
 }
 
 impl ApplicationHandler for Application {
@@ -20,7 +22,9 @@ impl ApplicationHandler for Application {
       .create_window(window_attributes)
       .expect("Failed to create window");
 
-    self.window = Some(window);
+    let state = GfxState::new(window);
+
+    self.state = Some(state);
   }
 
   fn window_event(

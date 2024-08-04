@@ -2,6 +2,7 @@ mod app;
 mod color;
 mod geometry_value;
 mod renderer;
+mod state;
 
 use std::error::Error;
 
