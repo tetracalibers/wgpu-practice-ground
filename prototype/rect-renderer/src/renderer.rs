@@ -154,7 +154,6 @@ impl UiRenderer {
       return;
     }
 
-    // let offset = self.rectangle_count * RECTANGLE_STRUCT_SIZE;
     let new_rectangle = vec![
       rect.color.r,
       rect.color.g,
@@ -175,22 +174,6 @@ impl UiRenderer {
     ];
 
     self.rectangle_data.extend(new_rectangle);
-
-    // self.rectangle_data[offset] = rect.color.r;
-    // self.rectangle_data[offset + 1] = rect.color.g;
-    // self.rectangle_data[offset + 2] = rect.color.b;
-    // self.rectangle_data[offset + 3] = rect.color.a;
-    // self.rectangle_data[offset + 4] = rect.bounds.origin.x;
-    // self.rectangle_data[offset + 5] = rect.bounds.origin.y;
-    // self.rectangle_data[offset + 6] = 0.0;
-    // self.rectangle_data[offset + 7] = rect.sigma;
-    // self.rectangle_data[offset + 8] = rect.corners.top_left;
-    // self.rectangle_data[offset + 9] = rect.corners.top_right;
-    // self.rectangle_data[offset + 10] = rect.corners.bottom_right;
-    // self.rectangle_data[offset + 11] = rect.corners.bottom_left;
-    // self.rectangle_data[offset + 12] = rect.bounds.size.width;
-    // self.rectangle_data[offset + 13] = rect.bounds.size.height;
-
     self.rectangle_count += 1;
   }
 
