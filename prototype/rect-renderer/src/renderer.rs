@@ -21,7 +21,10 @@ const RECTANGLE_BUFFER_SIZE: usize =
 const FULL_SCREEN_QUAD_VERTICES: [f32; 12] =
   [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
 
+const SAMPLE_COUNT: u32 = 4;
+
 pub struct UiRenderer {
+  msaa_texture_view: wgpu::TextureView,
   vertex_buffer: wgpu::Buffer,
   rectangle_buffer: wgpu::Buffer,
   rectangle_bind_group: wgpu::BindGroup,
@@ -33,7 +36,7 @@ pub struct UiRenderer {
 impl UiRenderer {
   pub fn new(
     device: &wgpu::Device,
-    target_format: wgpu::TextureFormat,
+    target_config: &wgpu::SurfaceConfiguration,
   ) -> Self {
     let vertex_buffer_layout = wgpu::VertexBufferLayout {
       array_stride: 2 * std::mem::size_of::<f32>() as u64,
@@ -131,7 +134,7 @@ impl UiRenderer {
         },
         depth_stencil: None,
         multisample: wgpu::MultisampleState {
-          count: 1, // TODO: update
+          count: SAMPLE_COUNT,
           mask: !0,
           alpha_to_coverage_enabled: false,
         },
@@ -139,7 +142,25 @@ impl UiRenderer {
         cache: None,
       });
 
+    let msaa_texture = device.create_texture(&wgpu::TextureDescriptor {
+      label: Some("color"),
+      size: wgpu::Extent3d {
+        width: target_config.width,
+        height: target_config.height,
+        ..Default::default()
+      },
+      mip_level_count: 1,
+      sample_count: SAMPLE_COUNT,
+      dimension: wgpu::TextureDimension::D2,
+      format: target_config.format,
+      usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+        | wgpu::TextureUsages::COPY_SRC,
+      view_formats: &[],
+    });
+    let msaa_texture_view = msaa_texture.create_view(&Default::default());
+
     Self {
+      msaa_texture_view,
       vertex_buffer,
       rectangle_buffer,
       rectangle_bind_group,
@@ -186,8 +207,8 @@ impl UiRenderer {
     let mut render_pass =
       encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-          view,
-          resolve_target: None, // TODO: update
+          view: &self.msaa_texture_view,
+          resolve_target: Some(view),
           ops: wgpu::Operations {
             load: wgpu::LoadOp::Clear(wgpu::Color {
               r: 1.0,

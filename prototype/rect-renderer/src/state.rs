@@ -63,7 +63,7 @@ impl<'a> GfxState<'a> {
 
     surface.configure(&device, &config);
 
-    let ui = UiRenderer::new(&device, config.format);
+    let ui = UiRenderer::new(&device, &config);
 
     Self {
       window,
@@ -122,10 +122,10 @@ impl<'a> GfxState<'a> {
         },
         sigma: 0.25,
         corners: Corners {
-          top_left: 0.0,
-          top_right: 0.0,
-          bottom_right: 0.0,
-          bottom_left: 0.0,
+          top_left: 10.0,
+          top_right: 10.0,
+          bottom_right: 10.0,
+          bottom_left: 10.0,
         },
       },
     );
