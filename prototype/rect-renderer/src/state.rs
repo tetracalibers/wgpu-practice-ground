@@ -40,19 +40,11 @@ impl<'a> GfxState<'a> {
       .await
       .unwrap();
 
-    let surface_caps = surface.get_capabilities(&adapter);
-    let surface_format = surface_caps
-      .formats
-      .iter()
-      .find(|format| format.is_srgb())
-      .copied()
-      .unwrap_or(surface_caps.formats[0]);
-
     let size = window.inner_size();
 
     let config = wgpu::SurfaceConfiguration {
       usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-      format: surface_format,
+      format: wgpu::TextureFormat::Bgra8Unorm,
       width: size.width,
       height: size.height,
       present_mode: wgpu::PresentMode::Fifo,
