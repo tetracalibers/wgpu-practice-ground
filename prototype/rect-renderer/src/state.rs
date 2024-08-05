@@ -143,6 +143,29 @@ impl<'a> GfxState<'a> {
 
     self.ui.rectangle(Rect {
       color: Color {
+        r: 0.5,
+        g: 0.25,
+        b: 1.0,
+        a: 1.0,
+      },
+      bounds: Bounds {
+        origin: Point { x: 150.0, y: 300.0 },
+        size: Size {
+          width: 100.0,
+          height: 100.0,
+        },
+      },
+      corners: Corners {
+        top_left: 0.0,
+        top_right: 10.0,
+        bottom_right: 20.0,
+        bottom_left: 30.0,
+      },
+      sigma: 0.25,
+    });
+
+    self.ui.rectangle(Rect {
+      color: Color {
         r: 1.0,
         g: 0.5,
         b: 0.25,
