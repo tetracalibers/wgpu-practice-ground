@@ -170,7 +170,7 @@ impl UiRenderer {
     }
   }
 
-  pub fn rectangle(&mut self, window: PhysicalSize<u32>, rect: Rect) {
+  pub fn rectangle(&mut self, window_size: PhysicalSize<u32>, rect: Rect) {
     if self.rectangle_count >= MAX_RECTANGLE_COUNT {
       return;
     }
@@ -190,8 +190,8 @@ impl UiRenderer {
       rect.corners.bottom_left,
       rect.bounds.size.width,
       rect.bounds.size.height,
-      window.width as f32,
-      window.height as f32,
+      window_size.width as f32,
+      window_size.height as f32,
     ];
 
     self.rectangle_data.extend(new_rectangle);
