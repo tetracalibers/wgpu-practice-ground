@@ -108,20 +108,19 @@ impl UiRenderer {
           module: &rectangle_module,
           entry_point: "fs_main",
           targets: &[Some(wgpu::ColorTargetState {
-            format: target_format,
-            // blend: Some(wgpu::BlendState {
-            //   color: wgpu::BlendComponent {
-            //     src_factor: wgpu::BlendFactor::SrcAlpha,
-            //     dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-            //     ..Default::default()
-            //   },
-            //   alpha: wgpu::BlendComponent {
-            //     src_factor: wgpu::BlendFactor::SrcAlpha,
-            //     dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-            //     ..Default::default()
-            //   },
-            // }),
-            blend: Some(wgpu::BlendState::REPLACE),
+            format: target_config.format,
+            blend: Some(wgpu::BlendState {
+              color: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::SrcAlpha,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                ..Default::default()
+              },
+              alpha: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::SrcAlpha,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                ..Default::default()
+              },
+            }),
             write_mask: wgpu::ColorWrites::ALL,
           })],
           compilation_options: wgpu::PipelineCompilationOptions::default(),
