@@ -80,8 +80,8 @@ struct VertexInput {
 
 struct VertexOutput {
   @builtin(position) position: vec4f,
-  @location(0) instance: u32, // TODO: @interpolate(flat)
-  @location(1) v_coord: vec2f, // TODO: @interpolate(linear))
+  @location(0) @interpolate(flat) instance: u32,
+  @location(1) @interpolate(linear) v_coord: vec2f,
 }
 
 @vertex
