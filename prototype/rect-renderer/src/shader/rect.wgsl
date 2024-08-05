@@ -60,6 +60,7 @@ fn rounded_box_shadow(
 struct Rectangle {
   color: vec4f,
   origin: vec2f,
+  _origin_z: f32,
   sigma: f32,
   corners: vec4f,
   size: vec2f,
