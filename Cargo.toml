@@ -23,5 +23,6 @@ members = [
   "tutorial/ch04-buffer",
   "tutorial/ch05-indice",
   "tutorial/ch06-texture",
+  "tutorial/hello-glyphon",
   "tutorial/life-game",
 ]
