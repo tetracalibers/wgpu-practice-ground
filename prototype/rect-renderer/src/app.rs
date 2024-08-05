@@ -9,11 +9,11 @@ use winit::{
 use crate::state::GfxState;
 
 #[derive(Default)]
-pub struct Application {
-  state: Option<GfxState>,
+pub struct Application<'a> {
+  state: Option<GfxState<'a>>,
 }
 
-impl ApplicationHandler for Application {
+impl<'a> ApplicationHandler for Application<'a> {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
     let window_attributes =
       Window::default_attributes().with_title("Prototype: Rect Renderer");
@@ -22,7 +22,7 @@ impl ApplicationHandler for Application {
       .create_window(window_attributes)
       .expect("Failed to create window");
 
-    let state = GfxState::new(window);
+    let state = pollster::block_on(async { GfxState::new(window).await });
 
     self.state = Some(state);
   }
@@ -33,6 +33,11 @@ impl ApplicationHandler for Application {
     _window_id: WindowId,
     event: WindowEvent,
   ) {
+    let state = match &mut self.state {
+      Some(state) => state,
+      None => return,
+    };
+
     match event {
       WindowEvent::CloseRequested => {
         event_loop.exit();
@@ -48,7 +53,26 @@ impl ApplicationHandler for Application {
       } => {
         event_loop.exit();
       }
+      WindowEvent::RedrawRequested => match state.render() {
+        Ok(_) => {}
+        Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+          state.resize(state.size());
+        }
+        Err(wgpu::SurfaceError::OutOfMemory) => {
+          println!("Out of memory");
+          event_loop.exit();
+        }
+        Err(wgpu::SurfaceError::Timeout) => {
+          println!("Surface timeout");
+        }
+      },
       _ => {}
+    }
+  }
+
+  fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+    if let Some(state) = &self.state {
+      state.window().request_redraw();
     }
   }
 }
