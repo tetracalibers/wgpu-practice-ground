@@ -1,5 +1,6 @@
 use winit::{
   application::ApplicationHandler,
+  dpi::LogicalSize,
   event::{ElementState, KeyEvent, WindowEvent},
   event_loop::ActiveEventLoop,
   keyboard::{KeyCode, PhysicalKey},
@@ -15,8 +16,9 @@ pub struct Application<'a> {
 
 impl<'a> ApplicationHandler for Application<'a> {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-    let window_attributes =
-      Window::default_attributes().with_title("Prototype: Rect Renderer");
+    let window_attributes = Window::default_attributes()
+      .with_title("Prototype: Rect Renderer")
+      .with_inner_size(LogicalSize::new(400.0, 300.0));
 
     let window = event_loop
       .create_window(window_attributes)
