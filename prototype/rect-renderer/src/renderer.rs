@@ -1,5 +1,4 @@
 use wgpu::{include_wgsl, util::DeviceExt};
-use winit::dpi::PhysicalSize;
 
 use crate::{
   color::Color,
@@ -24,6 +23,8 @@ const FULL_SCREEN_QUAD_VERTICES: [f32; 12] =
 const SAMPLE_COUNT: u32 = 4;
 
 pub struct UiRenderer {
+  viewport_width: f32,
+  viewport_height: f32,
   msaa_texture_view: wgpu::TextureView,
   vertex_buffer: wgpu::Buffer,
   rectangle_buffer: wgpu::Buffer,
@@ -160,6 +161,8 @@ impl UiRenderer {
     let msaa_texture_view = msaa_texture.create_view(&Default::default());
 
     Self {
+      viewport_width: target_config.width as f32,
+      viewport_height: target_config.height as f32,
       msaa_texture_view,
       vertex_buffer,
       rectangle_buffer,
@@ -170,7 +173,12 @@ impl UiRenderer {
     }
   }
 
-  pub fn rectangle(&mut self, window_size: PhysicalSize<u32>, rect: Rect) {
+  pub fn set_viewport_size(&mut self, width: u32, height: u32) {
+    self.viewport_width = width as f32;
+    self.viewport_height = height as f32;
+  }
+
+  pub fn rectangle(&mut self, rect: Rect) {
     if self.rectangle_count >= MAX_RECTANGLE_COUNT {
       return;
     }
@@ -190,8 +198,8 @@ impl UiRenderer {
       rect.corners.bottom_left,
       rect.bounds.size.width,
       rect.bounds.size.height,
-      window_size.width as f32,
-      window_size.height as f32,
+      self.viewport_width,
+      self.viewport_height,
     ];
 
     self.rectangle_data.extend(new_rectangle);
@@ -222,8 +230,14 @@ impl UiRenderer {
         ..Default::default()
       });
 
-    // TODO: 検討
-    //render_pass.set_viewport(0, 0, w, h, 0, 1);
+    render_pass.set_viewport(
+      0.0,
+      0.0,
+      self.viewport_width,
+      self.viewport_height,
+      0.0,
+      1.0,
+    );
 
     queue.write_buffer(
       &self.rectangle_buffer,
