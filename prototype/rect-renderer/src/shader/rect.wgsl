@@ -78,9 +78,9 @@ struct VertexInput {
 }
 
 struct VertexOutput {
-  @builtin(position) pos: vec4f,
+  @builtin(position) position: vec4f,
   @location(1) instance: u32, // TODO: @interpolate(flat)
-  @location(2) coord: vec2f, // TODO: @interpolate(linear))
+  @location(2) v_coord: vec2f, // TODO: @interpolate(linear))
 }
 
 @vertex
@@ -95,10 +95,10 @@ fn vs_main(in: VertexInput) -> VertexOutput {
   );
   
   var out: VertexOutput;
-  out.pos = vec4f(vertex / rect.window * 2 - 1, 0, 1);
-  out.pos.y *= -1.0;
+  out.position = vec4f(vertex / rect.window * 2 - 1, 0, 1);
+  out.position.y *= -1.0;
   out.instance = in.instance;
-  out.coord = vertex;
+  out.v_coord = vertex;
   
   return out;
 }
@@ -109,7 +109,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
   let mask = rounded_box_shadow(
     rect.origin.xy,
     rect.origin.xy + rect.size,
-    in.coord,
+    in.v_coord,
     rect.sigma,
     rect.corners
   );
