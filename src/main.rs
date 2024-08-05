@@ -35,6 +35,9 @@ fn main() {
     "export-gif:tutorial/life-game" => {
       life_game::export_gif();
     }
+    "tutorial/hello-glyphon" => {
+      hello_glyphon::run().unwrap();
+    }
     "prototype/rect-renderer" => {
       rect_renderer::run().unwrap();
     }

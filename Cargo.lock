@@ -3259,6 +3259,7 @@ dependencies = [
  "ch04-buffer",
  "ch05-indice",
  "ch06-texture",
+ "hello-glyphon",
  "life-game",
  "rect-renderer",
 ]
