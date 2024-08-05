@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use winit::{dpi::PhysicalSize, window::Window};
 
-use crate::renderer::UiRenderer;
+use crate::color::Color;
+use crate::geometry_value::*;
+use crate::renderer::{Rect, UiRenderer};
 
 pub struct GfxState<'a> {
   window: Arc<Window>,
@@ -91,7 +93,7 @@ impl<'a> GfxState<'a> {
     }
   }
 
-  pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
+  pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
     let surface_texture = self.surface.get_current_texture()?;
     let view = surface_texture
       .texture
@@ -102,7 +104,33 @@ impl<'a> GfxState<'a> {
         label: Some("render blurred rectangles"),
       });
 
-    self.ui.render(&mut encoder, &view);
+    self.ui.rectangle(
+      self.window.inner_size(),
+      Rect {
+        color: Color {
+          r: 1.0,
+          g: 0.5,
+          b: 1.0,
+          a: 1.0,
+        },
+        bounds: Bounds {
+          origin: Point { x: 50.0, y: 100.0 },
+          size: Size {
+            width: 100.0,
+            height: 100.0,
+          },
+        },
+        sigma: 0.25,
+        corners: Corners {
+          top_left: 0.0,
+          top_right: 0.0,
+          bottom_right: 0.0,
+          bottom_left: 0.0,
+        },
+      },
+    );
+
+    self.ui.render(&mut encoder, &self.queue, &view);
 
     self.queue.submit(std::iter::once(encoder.finish()));
     surface_texture.present();

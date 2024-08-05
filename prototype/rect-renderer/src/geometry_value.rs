@@ -1,21 +1,21 @@
-struct Point<T> {
-  x: T,
-  y: T,
+pub struct Point<T> {
+  pub x: T,
+  pub y: T,
 }
 
-struct Size<T> {
-  width: T,
-  height: T,
+pub struct Size<T> {
+  pub width: T,
+  pub height: T,
 }
 
 pub struct Bounds<T> {
-  origin: Point<T>,
-  size: Size<T>,
+  pub origin: Point<T>,
+  pub size: Size<T>,
 }
 
 pub struct Corners<T> {
-  top_left: T,
-  top_right: T,
-  bottom_right: T,
-  bottom_left: T,
+  pub top_left: T,
+  pub top_right: T,
+  pub bottom_right: T,
+  pub bottom_left: T,
 }
