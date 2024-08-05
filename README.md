@@ -33,3 +33,7 @@ cargo run -- tutorial/life-game
 ```bash
 cargo run -- export-gif:tutorial/life-game
 ```
+
+```bash
+cargo run -- prototype/rect-renderer
+```

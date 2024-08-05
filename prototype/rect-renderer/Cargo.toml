@@ -1,0 +1,12 @@
+[package]
+name    = "rect-renderer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+env_logger = "0.11.3"
+log        = "0.4.22"
+pollster   = "0.3.0"
+wgpu       = "22.0.0"
+winit      = "0.30.4"
+bytemuck   = { version = "1.16.1", features = ["derive"] }

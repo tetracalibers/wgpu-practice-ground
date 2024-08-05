@@ -35,6 +35,9 @@ fn main() {
     "export-gif:tutorial/life-game" => {
       life_game::export_gif();
     }
+    "prototype/rect-renderer" => {
+      rect_renderer::run().unwrap();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
