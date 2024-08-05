@@ -1,4 +1,4 @@
-use wgpu::include_wgsl;
+use wgpu::{include_wgsl, util::DeviceExt};
 use winit::dpi::PhysicalSize;
 
 use crate::{
@@ -18,7 +18,11 @@ const MAX_RECTANGLE_COUNT: usize = 1024;
 const RECTANGLE_BUFFER_SIZE: usize =
   RECTANGLE_STRUCT_SIZE * MAX_RECTANGLE_COUNT;
 
+const FULL_SCREEN_QUAD_VERTICES: [f32; 12] =
+  [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+
 pub struct UiRenderer {
+  vertex_buffer: wgpu::Buffer,
   rectangle_buffer: wgpu::Buffer,
   rectangle_bind_group: wgpu::BindGroup,
   rectangle_pipeline: wgpu::RenderPipeline,
@@ -31,6 +35,23 @@ impl UiRenderer {
     device: &wgpu::Device,
     target_format: wgpu::TextureFormat,
   ) -> Self {
+    let vertex_buffer_layout = wgpu::VertexBufferLayout {
+      array_stride: 2 * std::mem::size_of::<f32>() as u64,
+      step_mode: wgpu::VertexStepMode::Vertex,
+      attributes: &[wgpu::VertexAttribute {
+        format: wgpu::VertexFormat::Float32x2,
+        offset: 0,
+        shader_location: 0,
+      }],
+    };
+
+    let vertex_buffer =
+      device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("full-screen-sized quad"),
+        contents: bytemuck::cast_slice(&FULL_SCREEN_QUAD_VERTICES),
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+      });
+
     let rectangle_buffer = device.create_buffer(&wgpu::BufferDescriptor {
       label: Some("rectangle"),
       size: RECTANGLE_BUFFER_SIZE as u64,
@@ -80,7 +101,7 @@ impl UiRenderer {
         vertex: wgpu::VertexState {
           module: &rectangle_module,
           entry_point: "vs_main",
-          buffers: &[],
+          buffers: &[vertex_buffer_layout],
           compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         fragment: Some(wgpu::FragmentState {
@@ -88,7 +109,19 @@ impl UiRenderer {
           entry_point: "fs_main",
           targets: &[Some(wgpu::ColorTargetState {
             format: target_format,
-            blend: Some(wgpu::BlendState::REPLACE), // TODO: update
+            // blend: Some(wgpu::BlendState {
+            //   color: wgpu::BlendComponent {
+            //     src_factor: wgpu::BlendFactor::SrcAlpha,
+            //     dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+            //     ..Default::default()
+            //   },
+            //   alpha: wgpu::BlendComponent {
+            //     src_factor: wgpu::BlendFactor::SrcAlpha,
+            //     dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+            //     ..Default::default()
+            //   },
+            // }),
+            blend: Some(wgpu::BlendState::REPLACE),
             write_mask: wgpu::ColorWrites::ALL,
           })],
           compilation_options: wgpu::PipelineCompilationOptions::default(),
@@ -108,6 +141,7 @@ impl UiRenderer {
       });
 
     Self {
+      vertex_buffer,
       rectangle_buffer,
       rectangle_bind_group,
       rectangle_pipeline,
@@ -196,7 +230,8 @@ impl UiRenderer {
 
     render_pass.set_pipeline(&self.rectangle_pipeline);
     render_pass.set_bind_group(0, &self.rectangle_bind_group, &[]);
-    render_pass.draw(0..3, 0..self.rectangle_count as u32);
+    render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+    render_pass.draw(0..6, 0..self.rectangle_count as u32);
 
     self.rectangle_count = 0;
     self.rectangle_data.clear();
