@@ -18,6 +18,7 @@ rect-renderer = { path = "./prototype/rect-renderer" }
 
 members = [
   "prototype/rect-renderer",
+  "prototype/text-renderer",
   "tutorial/ch01-window",
   "tutorial/ch02-surface",
   "tutorial/ch03-pipeline",
