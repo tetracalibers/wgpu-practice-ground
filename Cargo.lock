@@ -3274,6 +3274,7 @@ dependencies = [
  "hello-glyphon",
  "life-game",
  "rect-renderer",
+ "text-renderer",
 ]
 
 [[package]]

@@ -41,6 +41,9 @@ fn main() {
     "prototype/rect-renderer" => {
       rect_renderer::run().unwrap();
     }
+    "prototype/text-renderer" => {
+      text_renderer::run().unwrap();
+    }
     _ => {
       eprintln!("Not found: {}", target);
     }
