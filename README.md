@@ -35,5 +35,9 @@ cargo run -- export-gif:tutorial/life-game
 ```
 
 ```bash
+cargo run -- tutorial/hello-glyphon
+```
+
+```bash
 cargo run -- prototype/rect-renderer
 ```

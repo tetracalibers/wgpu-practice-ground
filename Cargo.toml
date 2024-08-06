@@ -11,6 +11,7 @@ ch04-buffer   = { path = "./tutorial/ch04-buffer" }
 ch05-indice   = { path = "./tutorial/ch05-indice" }
 ch06-texture  = { path = "./tutorial/ch06-texture" }
 life-game     = { path = "./tutorial/life-game" }
+hello-glyphon = { path = "./tutorial/hello-glyphon" }
 rect-renderer = { path = "./prototype/rect-renderer" }
 
 [workspace]
@@ -23,5 +24,6 @@ members = [
   "tutorial/ch04-buffer",
   "tutorial/ch05-indice",
   "tutorial/ch06-texture",
+  "tutorial/hello-glyphon",
   "tutorial/life-game",
 ]
