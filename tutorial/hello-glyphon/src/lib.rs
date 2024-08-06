@@ -1,5 +1,6 @@
 mod app;
 mod state;
+mod text;
 
 use std::error::Error;
 
