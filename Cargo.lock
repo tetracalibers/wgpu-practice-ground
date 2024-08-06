@@ -1129,7 +1129,7 @@ dependencies = [
  "glyphon",
  "log",
  "pollster",
- "wgpu 22.0.0",
+ "wgpu 0.19.4",
  "winit",
 ]
 
