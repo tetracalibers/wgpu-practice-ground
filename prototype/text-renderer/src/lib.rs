@@ -57,3 +57,27 @@ pub fn try_cosmic_text() -> Result<(), Box<dyn Error>> {
 
   Ok(())
 }
+
+pub fn try_etagere() -> Result<(), Box<dyn Error>> {
+  use etagere::*;
+  use std::fs::File;
+
+  let mut output = File::create("export/etagere.svg")?;
+
+  let mut atlas = AtlasAllocator::new(size2(1000, 1000));
+
+  let a = atlas.allocate(size2(100, 100)).unwrap();
+  let b = atlas.allocate(size2(900, 200)).unwrap();
+
+  println!("Allocated {:?} and {:?}", a.rectangle, b.rectangle);
+  atlas.dump_svg(&mut output)?;
+
+  atlas.deallocate(a.id);
+
+  let c = atlas.allocate(size2(300, 200)).unwrap();
+
+  atlas.deallocate(c.id);
+  atlas.deallocate(b.id);
+
+  Ok(())
+}
