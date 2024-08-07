@@ -18,7 +18,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
-pub fn proto() -> Result<(), Box<dyn Error>> {
+pub fn try_cosmic_text() -> Result<(), Box<dyn Error>> {
   use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping, SwashCache};
 
   // A FontSystem provides access to detected system fonts, create one per application
