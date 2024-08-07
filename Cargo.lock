@@ -2663,6 +2663,7 @@ dependencies = [
  "bytemuck",
  "cosmic-text 0.12.1",
  "env_logger",
+ "etagere",
  "log",
  "pollster",
  "wgpu 22.0.0",
