@@ -44,7 +44,8 @@ fn main() {
     "prototype/text-renderer" => {
       // TODO: change to text_renderer::run()
       // text_renderer::try_cosmic_text().unwrap();
-      text_renderer::try_etagere().unwrap();
+      // text_renderer::try_etagere().unwrap();
+      text_renderer::proto().unwrap();
     }
     _ => {
       eprintln!("Not found: {}", target);

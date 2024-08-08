@@ -1,4 +1,6 @@
 mod app;
+mod atlas;
+mod lookup;
 mod renderer;
 mod state;
 
@@ -78,6 +80,46 @@ pub fn try_etagere() -> Result<(), Box<dyn Error>> {
 
   atlas.deallocate(c.id);
   atlas.deallocate(b.id);
+
+  Ok(())
+}
+
+pub fn proto() -> Result<(), Box<dyn Error>> {
+  use cosmic_text::*;
+  use etagere::*;
+  use std::fs::File;
+
+  let mut font_system = FontSystem::new();
+  let metrics = Metrics::new(14.0, 20.0);
+  let mut buffer = Buffer::new(&mut font_system, metrics);
+  let mut buffer = buffer.borrow_with(&mut font_system);
+
+  buffer.set_size(Some(80.0), Some(25.0));
+  let attrs = Attrs::new();
+  buffer.set_text("Hello, Rust! 🦀\n", attrs, Shaping::Advanced);
+  buffer.shape_until_scroll(true);
+
+  let mut packer = BucketedAtlasAllocator::new(size2(200, 200));
+  let mut atlas_list = Vec::new();
+
+  for run in buffer.layout_runs() {
+    for glyph in run.glyphs.iter() {
+      let size = size2(glyph.w as i32, glyph.w as i32);
+      let a = packer.allocate(size);
+      if let Some(a) = a {
+        atlas_list.push(a.id);
+      } else {
+        println!("Failed to allocate {:?}", glyph);
+      }
+    }
+  }
+
+  let mut output = File::create("export/proto-bucket-alras.svg")?;
+  packer.dump_svg(&mut output)?;
+
+  for id in atlas_list {
+    packer.deallocate(id);
+  }
 
   Ok(())
 }
