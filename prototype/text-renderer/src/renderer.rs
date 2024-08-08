@@ -7,6 +7,13 @@ const TEXT_BUFFER_SIZE: usize = TEXT_STRUCT_SIZE * MAX_TEXT_COUNT;
 const FULL_SCREEN_QUAD_VERTICES: [f32; 12] =
   [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
 
+pub struct Text<'a> {
+  content: &'a str,
+  position: [f32; 2], // TODO: replace Size struct
+  font_size: f32,
+  color: [f32; 4], // TODO: replace Color struct
+}
+
 pub struct FontData {
   text_bind_group: wgpu::BindGroup,
 }
@@ -178,6 +185,10 @@ impl UiRenderer {
         ],
       }),
     }
+  }
+
+  pub fn text(&self, text: Text) {
+    todo!()
   }
 
   pub fn render(
