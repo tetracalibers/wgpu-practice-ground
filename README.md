@@ -41,3 +41,7 @@ cargo run -- tutorial/hello-glyphon
 ```bash
 cargo run -- prototype/rect-renderer
 ```
+
+```bash
+cargo run -- prototype/text-renderer
+```

@@ -13,11 +13,13 @@ ch06-texture  = { path = "./tutorial/ch06-texture" }
 life-game     = { path = "./tutorial/life-game" }
 hello-glyphon = { path = "./tutorial/hello-glyphon" }
 rect-renderer = { path = "./prototype/rect-renderer" }
+text-renderer = { path = "./prototype/text-renderer" }
 
 [workspace]
 
 members = [
   "prototype/rect-renderer",
+  "prototype/text-renderer",
   "tutorial/ch01-window",
   "tutorial/ch02-surface",
   "tutorial/ch03-pipeline",
