@@ -84,6 +84,25 @@ pub fn try_etagere() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+pub fn try_swash() -> Result<(), Box<dyn Error>> {
+  use swash::FontRef;
+
+  let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
+  // Read the full font file
+  let font_data = std::fs::read(font_path)?;
+  // Create a font reference for the first font in the file
+  let font = FontRef::from_index(&font_data, 0).unwrap();
+  // Print the font attributes (stretch, weight and style)
+  println!("{}", font.attributes());
+  // Iterate through the localized strings
+  for string in font.localized_strings() {
+    // Print the string identifier and the actual value
+    println!("[{:?}] {}", string.id(), string.to_string());
+  }
+
+  Ok(())
+}
+
 pub fn proto() -> Result<(), Box<dyn Error>> {
   use cosmic_text::*;
   use etagere::*;
