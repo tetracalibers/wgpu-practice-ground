@@ -2666,6 +2666,7 @@ dependencies = [
  "etagere",
  "log",
  "pollster",
+ "swash",
  "wgpu 22.0.0",
  "winit",
 ]

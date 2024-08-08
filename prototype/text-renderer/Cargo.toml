@@ -12,3 +12,4 @@ winit       = "0.30.4"
 bytemuck    = { version = "1.16.1", features = ["derive"] }
 cosmic-text = "0.12.1"
 etagere     = "0.2.13"
+swash       = "0.1.18"
