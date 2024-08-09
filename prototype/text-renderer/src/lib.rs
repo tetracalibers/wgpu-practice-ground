@@ -104,41 +104,212 @@ pub fn try_swash() -> Result<(), Box<dyn Error>> {
 }
 
 pub fn proto() -> Result<(), Box<dyn Error>> {
-  use cosmic_text::*;
-  use etagere::*;
-  use std::fs::File;
+  use etagere::size2;
+  use std::collections::HashMap;
+  // use swash::shape::cluster::GlyphCluster;
+  // use swash::shape::ShapeContext;
+  // use swash::text::cluster::CharCluster;
+  // use swash::text::cluster::{CharInfo, Parser, Token};
+  // use swash::text::{analyze, Script};
+  // use swash::GlyphMetrics;
+  use ttf_parser as ttf;
 
-  let mut font_system = FontSystem::new();
-  let metrics = Metrics::new(14.0, 20.0);
-  let mut buffer = Buffer::new(&mut font_system, metrics);
-  let mut buffer = buffer.borrow_with(&mut font_system);
+  const ATLAS_FONT_SIZE: u16 = 96;
+  const ATLAS_GAP: u16 = 4;
 
-  buffer.set_size(Some(80.0), Some(25.0));
-  let attrs = Attrs::new();
-  buffer.set_text("Hello, Rust! 🦀\n", attrs, Shaping::Advanced);
-  buffer.shape_until_scroll(true);
+  let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
+  //let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
+  let font_data = std::fs::read(font_path)?;
 
-  let mut packer = BucketedAtlasAllocator::new(size2(200, 200));
-  let mut atlas_list = Vec::new();
+  // use swash
+  //let font_ref = swash::FontRef::from_index(&font_data, 0).unwrap();
 
-  for run in buffer.layout_runs() {
-    for glyph in run.glyphs.iter() {
-      let size = size2(glyph.w as i32, glyph.w as i32);
-      let a = packer.allocate(size);
-      if let Some(a) = a {
-        atlas_list.push(a.id);
-      } else {
-        println!("Failed to allocate {:?}", glyph);
-      }
-    }
+  // use ttf-parser
+  let font_face = ttf::Face::parse(&font_data, 0)?;
+
+  // --- calculateGlyphQuads ---
+
+  struct Glyph {
+    id: ttf::GlyphId,
+    x: i16,
+    y: i16,
+    width: i16,
+    height: i16,
+    lsb: i16,
+    rsb: i16,
   }
 
-  let mut output = File::create("export/proto-bucket-alras.svg")?;
-  packer.dump_svg(&mut output)?;
+  let tables = font_face.tables();
 
-  for id in atlas_list {
-    packer.deallocate(id);
+  let glyf = tables.glyf.unwrap();
+  let hmtx = tables.hmtx.unwrap();
+
+  let num_glyphs = font_face.number_of_glyphs();
+
+  let glyphs = (0..num_glyphs)
+    .map(|id| {
+      let glyph_id = ttf::GlyphId(id);
+
+      let ttf::Rect {
+        x_min,
+        x_max,
+        y_min,
+        y_max,
+      } = glyf.bbox(glyph_id).unwrap_or(ttf::Rect {
+        x_min: 0,
+        x_max: 0,
+        y_min: 0,
+        y_max: 0,
+      });
+
+      let x = x_min;
+      let y = y_min;
+      let width = x_max - x_min;
+      let height = y_max - y_min;
+
+      let advance_width = hmtx.advance(glyph_id).unwrap_or(0) as i16;
+      let lsb = hmtx.side_bearing(glyph_id).unwrap_or(0);
+      let rsb = advance_width - lsb - width;
+
+      let glyph = Glyph {
+        id: glyph_id,
+        x: x.into(),
+        y: y.into(),
+        width: width.into(),
+        height: height.into(),
+        lsb,
+        rsb,
+      };
+
+      glyph
+    })
+    .collect::<Vec<_>>();
+
+  let glyph_map =
+    glyphs.iter().map(|gly| (gly.id, gly)).collect::<HashMap<_, _>>();
+
+  // --- prepareLookups ---
+
+  let ppem = font_face.units_per_em();
+  let scale = ATLAS_FONT_SIZE as f32 / ppem as f32;
+
+  let transform = |x: f32| -> f32 { (x * scale).ceil() };
+  let sizes = glyphs
+    .iter()
+    .map(|gly| {
+      let x = transform(gly.width as f32) as u16;
+      let y = transform(gly.height as f32) as u16;
+      (x + ATLAS_GAP * 2, y + ATLAS_GAP * 2)
+    })
+    .collect::<Vec<_>>();
+
+  // 与えられた整数 x を、x より大きくまたは等しい最小の2の累乗の値に切り上げる
+  // let ceil_pow2 =
+  //   |x: i16| -> i16 { 1 << (x.ilog2() as f32 + 1.0).ceil() as u16 };
+
+  // let (atlas_width, atlas_height) = glyphs.iter().fold(
+  //   (0, 0),
+  //   |(w, h),
+  //    Glyph {
+  //      x,
+  //      y,
+  //      height,
+  //      width,
+  //      ..
+  //    }| (w.max(*x + *width), h.max(*y + *height)),
+  // );
+  // let atlas_size = ceil_pow2(atlas_width).max(ceil_pow2(atlas_height)) as i32;
+
+  // TODO: 適切なサイズを算出するロジックを考える
+  let atlas_size = 4096;
+
+  let mut atlas = etagere::AtlasAllocator::new(size2(atlas_size, atlas_size));
+
+  // TODO: キャッシュの仕組みを用意し、allocateがNoneの場合に対応する
+  let allocations = sizes
+    .iter()
+    .map(|(w, h)| atlas.allocate(size2(*w as i32, *h as i32)).unwrap())
+    .collect::<Vec<_>>();
+
+  // let mut atlas_svg = std::fs::File::create("export/font-atlas.svg")?;
+  // atlas.dump_svg(&mut atlas_svg)?;
+
+  let atlas_positions = allocations
+    .iter()
+    .map(|alloc| {
+      let rect = alloc.rectangle.to_rect();
+      (rect.origin.x, rect.origin.y)
+    })
+    .collect::<Vec<_>>();
+
+  for alloc in allocations {
+    //if let Some(alloc) = alloc {
+    atlas.deallocate(alloc.id);
+    //}
   }
+
+  let uv_map = glyph_map
+    .keys()
+    .enumerate()
+    .map(|(i, g_id)| {
+      let (w, h) = sizes[i];
+      let (x, y) = atlas_positions[i];
+      let (w, h) = (w as f32, h as f32);
+      let (x, y) = (x as f32, y as f32);
+      let (w, h) = (w / atlas_size as f32, h / atlas_size as f32);
+      let (x, y) = (x / atlas_size as f32, y / atlas_size as f32);
+      let vec4 = (x, y, w, h);
+      (g_id, vec4)
+    })
+    .collect::<HashMap<_, _>>();
+
+  // --- renderFontAtlas ---
+
+  // --- draft ---
+
+  // フォントファイルから文字を取り出して表示
+  //font_ref.charmap().enumerate(|index, code| {
+  //  println!("{:?} -> {:?}", index, std::char::from_u32(code as u32));
+  //});
+
+  // let mut context = ShapeContext::new();
+  // let mut shaper =
+  //   context.builder(font_ref).script(Script::Latin).size(14.0).build();
+
+  // let text = "a quick brown fox?";
+  // let mut parser = Parser::new(
+  //   Script::Latin,
+  //   text.char_indices().zip(analyze(text.chars())).map(
+  //     |((i, ch), (props, boundary))| Token {
+  //       ch,
+  //       offset: i as u32,
+  //       len: ch.len_utf8() as u8,
+  //       info: CharInfo::new(props, boundary),
+  //       data: 0,
+  //     },
+  //   ),
+  // );
+
+  // let mut cluster = CharCluster::new();
+  // let charmap = font_ref.charmap();
+
+  // while parser.next(&mut cluster) {
+  //   cluster.map(|ch| charmap.map(ch));
+  //   shaper.add_cluster(&cluster);
+  // }
+
+  // let metrics = shaper.metrics();
+
+  // let units_per_em = metrics.units_per_em;
+  // let scale = ATLAS_FONT_SIZE / units_per_em;
+
+  // let coords = shaper.normalized_coords();
+  // let glyph_metrics = font_ref.glyph_metrics(coords);
+
+  // charmap.enumerate(|_, code| {
+  //   let glyph_id = charmap.map(code);
+  //   let lsb = glyph_metrics.lsb(glyph_id);
+  // });
 
   Ok(())
 }
