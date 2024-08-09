@@ -106,12 +106,6 @@ pub fn try_swash() -> Result<(), Box<dyn Error>> {
 pub fn proto() -> Result<(), Box<dyn Error>> {
   use etagere::size2;
   use std::collections::HashMap;
-  // use swash::shape::cluster::GlyphCluster;
-  // use swash::shape::ShapeContext;
-  // use swash::text::cluster::CharCluster;
-  // use swash::text::cluster::{CharInfo, Parser, Token};
-  // use swash::text::{analyze, Script};
-  // use swash::GlyphMetrics;
   use ttf_parser as ttf;
 
   const ATLAS_FONT_SIZE: u16 = 96;
@@ -120,9 +114,6 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
   //let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
   let font_data = std::fs::read(font_path)?;
-
-  // use swash
-  //let font_ref = swash::FontRef::from_index(&font_data, 0).unwrap();
 
   // use ttf-parser
   let font_face = ttf::Face::parse(&font_data, 0)?;
@@ -264,52 +255,6 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     .collect::<HashMap<_, _>>();
 
   // --- renderFontAtlas ---
-
-  // --- draft ---
-
-  // フォントファイルから文字を取り出して表示
-  //font_ref.charmap().enumerate(|index, code| {
-  //  println!("{:?} -> {:?}", index, std::char::from_u32(code as u32));
-  //});
-
-  // let mut context = ShapeContext::new();
-  // let mut shaper =
-  //   context.builder(font_ref).script(Script::Latin).size(14.0).build();
-
-  // let text = "a quick brown fox?";
-  // let mut parser = Parser::new(
-  //   Script::Latin,
-  //   text.char_indices().zip(analyze(text.chars())).map(
-  //     |((i, ch), (props, boundary))| Token {
-  //       ch,
-  //       offset: i as u32,
-  //       len: ch.len_utf8() as u8,
-  //       info: CharInfo::new(props, boundary),
-  //       data: 0,
-  //     },
-  //   ),
-  // );
-
-  // let mut cluster = CharCluster::new();
-  // let charmap = font_ref.charmap();
-
-  // while parser.next(&mut cluster) {
-  //   cluster.map(|ch| charmap.map(ch));
-  //   shaper.add_cluster(&cluster);
-  // }
-
-  // let metrics = shaper.metrics();
-
-  // let units_per_em = metrics.units_per_em;
-  // let scale = ATLAS_FONT_SIZE / units_per_em;
-
-  // let coords = shaper.normalized_coords();
-  // let glyph_metrics = font_ref.glyph_metrics(coords);
-
-  // charmap.enumerate(|_, code| {
-  //   let glyph_id = charmap.map(code);
-  //   let lsb = glyph_metrics.lsb(glyph_id);
-  // });
 
   Ok(())
 }
