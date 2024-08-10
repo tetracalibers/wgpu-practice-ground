@@ -103,6 +103,53 @@ pub fn try_swash() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+pub fn try_rusttype() -> Result<(), Box<dyn Error>> {
+  use rusttype::Font;
+
+  const CHARACTER: char = 'Q';
+  const SIZE: f32 = 200.0;
+
+  let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
+  let font_data = std::fs::read(font_path)?;
+
+  let font = Font::try_from_bytes(font_data.as_slice())
+    .expect("error constructing a Font from bytes");
+
+  let glyph = font
+    .glyph(CHARACTER)
+    .scaled(rusttype::Scale::uniform(SIZE))
+    .positioned(rusttype::point(0.0, 0.0));
+  let (height, width) = if let Some(rect) = glyph.pixel_bounding_box() {
+    (rect.height(), rect.width())
+  } else {
+    (0, 0)
+  };
+
+  let mut bitmap = vec![0u8; (width * height) as usize];
+  glyph.draw(|x, y, v| {
+    bitmap[(x as usize) + (y as usize) * width as usize] = (v * 255.0) as u8;
+  });
+
+  let out_path = std::path::Path::new(r"./export/glyph-rusttype.png");
+  let out_file = std::fs::File::create(out_path).unwrap();
+  let ref mut w = std::io::BufWriter::new(out_file);
+
+  let mut encoder = png::Encoder::new(w, width as u32, height as u32);
+  encoder.set_color(png::ColorType::Grayscale);
+
+  println!(
+    "width: {}, height: {}, bitmap.len(): {}",
+    width,
+    height,
+    bitmap.len()
+  );
+
+  let mut writer = encoder.write_header().unwrap();
+  writer.write_image_data(&bitmap).unwrap();
+
+  Ok(())
+}
+
 pub fn proto() -> Result<(), Box<dyn Error>> {
   use etagere::size2;
   use std::collections::HashMap;
