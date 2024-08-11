@@ -169,6 +169,8 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   use std::collections::HashMap;
   use ttf_parser as ttf;
 
+  let version = 12;
+
   const ATLAS_FONT_SIZE: u16 = 48;
   const ATLAS_GAP: u16 = 4;
 
@@ -278,7 +280,8 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     .map(|(w, h)| atlas.allocate(size2(*w as i32, *h as i32)).unwrap())
     .collect::<Vec<_>>();
 
-  let mut atlas_svg = std::fs::File::create("export/font-atlas-v11.svg")?;
+  let mut atlas_svg =
+    std::fs::File::create(std::format!("export/font-atlas-v{}.svg", version))?;
   atlas.dump_svg(&mut atlas_svg)?;
 
   let atlas_positions = allocations
@@ -353,8 +356,9 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     });
   }
 
-  let atlas_bitmap_path = std::path::Path::new(r"./export/all-glyph-v11.png");
-  let atlas_bitmap_file = std::fs::File::create(atlas_bitmap_path).unwrap();
+  let atlas_bitmap_file =
+    std::fs::File::create(std::format!("./export/all-glyph-v{}.png", version))
+      .unwrap();
   let ref mut w = std::io::BufWriter::new(atlas_bitmap_file);
 
   let mut encoder = png::Encoder::new(w, atlas_size as u32, atlas_size as u32);
