@@ -173,7 +173,9 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   const ATLAS_GAP: u16 = 4;
 
   //let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
-  let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
+  //let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
+  //let font_path = "./font/Crimson_Text/CrimsonText-Regular.ttf";
+  let font_path = "./font/Lusitana/Lusitana-Regular.ttf";
   let font_data = std::fs::read(font_path)?;
 
   // use ttf-parser
@@ -255,27 +257,20 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     })
     .collect::<Vec<_>>();
 
-  // 与えられた整数 x を、x より大きくまたは等しい最小の2の累乗の値に切り上げる
-  // let ceil_pow2 =
-  //   |x: i16| -> i16 { 1 << (x.ilog2() as f32 + 1.0).ceil() as u16 };
+  let glyph_size = ATLAS_FONT_SIZE as f32;
+  println!("glyph_size: {}", glyph_size);
+  // glyph_size * glyph_size が 1グリフの面積となる
+  let atlas_size =
+    (glyph_size.powi(2) * num_glyphs as f32).sqrt().ceil() as i32;
+  println!("atlas_size: {}", atlas_size);
 
-  // let (atlas_width, atlas_height) = glyphs.iter().fold(
-  //   (0, 0),
-  //   |(w, h),
-  //    Glyph {
-  //      x,
-  //      y,
-  //      height,
-  //      width,
-  //      ..
-  //    }| (w.max(*x + *width), h.max(*y + *height)),
-  // );
-  // let atlas_size = ceil_pow2(atlas_width).max(ceil_pow2(atlas_height)) as i32;
-
-  // TODO: 適切なサイズを算出するロジックを考える
-  let atlas_size = 1024;
-
-  let mut atlas = etagere::AtlasAllocator::new(size2(atlas_size, atlas_size));
+  let mut atlas = etagere::AtlasAllocator::with_options(
+    size2(atlas_size, atlas_size),
+    &etagere::AllocatorOptions {
+      alignment: size2(2, 1),
+      ..Default::default()
+    },
+  );
 
   // TODO: キャッシュの仕組みを用意し、allocateがNoneの場合に対応する
   let allocations = sizes
@@ -283,7 +278,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     .map(|(w, h)| atlas.allocate(size2(*w as i32, *h as i32)).unwrap())
     .collect::<Vec<_>>();
 
-  let mut atlas_svg = std::fs::File::create("export/font-atlas-v2.svg")?;
+  let mut atlas_svg = std::fs::File::create("export/font-atlas-v11.svg")?;
   atlas.dump_svg(&mut atlas_svg)?;
 
   let atlas_positions = allocations
@@ -358,7 +353,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     });
   }
 
-  let out_path = std::path::Path::new(r"./export/all-glyph-v2.png");
+  let out_path = std::path::Path::new(r"./export/all-glyph-v11.png");
   let out_file = std::fs::File::create(out_path).unwrap();
   let ref mut w = std::io::BufWriter::new(out_file);
 
