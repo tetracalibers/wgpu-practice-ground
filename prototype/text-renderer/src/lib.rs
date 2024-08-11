@@ -353,9 +353,9 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     });
   }
 
-  let out_path = std::path::Path::new(r"./export/all-glyph-v11.png");
-  let out_file = std::fs::File::create(out_path).unwrap();
-  let ref mut w = std::io::BufWriter::new(out_file);
+  let atlas_bitmap_path = std::path::Path::new(r"./export/all-glyph-v11.png");
+  let atlas_bitmap_file = std::fs::File::create(atlas_bitmap_path).unwrap();
+  let ref mut w = std::io::BufWriter::new(atlas_bitmap_file);
 
   let mut encoder = png::Encoder::new(w, atlas_size as u32, atlas_size as u32);
   encoder.set_color(png::ColorType::Grayscale);
