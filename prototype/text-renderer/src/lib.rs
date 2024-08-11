@@ -283,7 +283,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     .map(|(w, h)| atlas.allocate(size2(*w as i32, *h as i32)).unwrap())
     .collect::<Vec<_>>();
 
-  let mut atlas_svg = std::fs::File::create("export/font-atlas.svg")?;
+  let mut atlas_svg = std::fs::File::create("export/font-atlas-v2.svg")?;
   atlas.dump_svg(&mut atlas_svg)?;
 
   let atlas_positions = allocations
@@ -350,15 +350,15 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   for (i, glyph) in positioned_glyphs.iter().enumerate() {
     glyph.draw(|x, y, v| {
       let (at_x, at_y) = atlas_positions[i];
-      let x = at_x as f32 + x as f32 + ATLAS_GAP as f32;
-      let y = at_y as f32 + y as f32 + ATLAS_GAP as f32;
-      println!("x: {}, y: {}, v: {}", x, y, v);
+      let x = at_x as f32 + x as f32;
+      let y = at_y as f32 + y as f32;
+      //println!("x: {}, y: {}, v: {}", x, y, v);
       bitmap[(x as usize) + (y as usize) * atlas_size as usize] =
         (v * 255.0) as u8;
     });
   }
 
-  let out_path = std::path::Path::new(r"./export/all-glyph.png");
+  let out_path = std::path::Path::new(r"./export/all-glyph-v2.png");
   let out_file = std::fs::File::create(out_path).unwrap();
   let ref mut w = std::io::BufWriter::new(out_file);
 
