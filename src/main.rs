@@ -46,8 +46,8 @@ fn main() {
       // text_renderer::try_cosmic_text().unwrap();
       // text_renderer::try_etagere().unwrap();
       //text_renderer::try_swash().unwrap();
-      text_renderer::try_rusttype().unwrap();
-      //text_renderer::proto().unwrap();
+      //text_renderer::try_rusttype().unwrap();
+      text_renderer::proto().unwrap();
     }
     _ => {
       eprintln!("Not found: {}", target);

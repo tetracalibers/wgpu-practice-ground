@@ -169,11 +169,11 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   use std::collections::HashMap;
   use ttf_parser as ttf;
 
-  const ATLAS_FONT_SIZE: u16 = 32;
+  const ATLAS_FONT_SIZE: u16 = 48;
   const ATLAS_GAP: u16 = 4;
 
-  let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
-  //let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
+  //let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
+  let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
   let font_data = std::fs::read(font_path)?;
 
   // use ttf-parser
@@ -294,6 +294,8 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     })
     .collect::<Vec<_>>();
 
+  //println!("atlas_positions: {:?}", atlas_positions);
+
   for alloc in allocations {
     //if let Some(alloc) = alloc {
     atlas.deallocate(alloc.id);
@@ -316,6 +318,55 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     .collect::<HashMap<_, _>>();
 
   // --- renderFontAtlas ---
+
+  // use rusttype
+  let font = rusttype::Font::try_from_bytes(font_data.as_slice())
+    .expect("error constructing a Font from bytes");
+
+  // The font size to use
+  let scale = rusttype::Scale::uniform(ATLAS_FONT_SIZE as f32);
+
+  // all glyph
+  let chars = glyph_map.keys().map(|g_id| {
+    char::from_u32(g_id.0.into())
+      .expect(std::format!("invalid char: {}", g_id.0).as_str())
+  });
+
+  let positioned_glyphs = font
+    .glyphs_for(chars)
+    .scan(None, |last, gl| {
+      let gl = gl.scaled(scale);
+      let gl = gl.positioned(rusttype::point(0., 0.));
+      let next = gl;
+      *last = Some(next.id());
+      Some(next)
+    })
+    .collect::<Vec<_>>();
+
+  let mut bitmap = vec![0u8; (atlas_size * atlas_size) as usize];
+
+  println!("atlas_size: {}, bitmap.len(): {}", atlas_size, bitmap.len());
+
+  for (i, glyph) in positioned_glyphs.iter().enumerate() {
+    glyph.draw(|x, y, v| {
+      let (at_x, at_y) = atlas_positions[i];
+      let x = x as f32 + at_x as f32 + ATLAS_GAP as f32;
+      let y = y as f32 + at_y as f32 + ATLAS_GAP as f32;
+      println!("x: {}, y: {}, v: {}", x, y, v);
+      bitmap[(x as usize) + (y as usize) * atlas_size as usize] =
+        (v * 255.0) as u8;
+    });
+  }
+
+  let out_path = std::path::Path::new(r"./export/all-glyph.png");
+  let out_file = std::fs::File::create(out_path).unwrap();
+  let ref mut w = std::io::BufWriter::new(out_file);
+
+  let mut encoder = png::Encoder::new(w, atlas_size as u32, atlas_size as u32);
+  encoder.set_color(png::ColorType::Grayscale);
+
+  let mut writer = encoder.write_header().unwrap();
+  writer.write_image_data(&bitmap).unwrap();
 
   Ok(())
 }
