@@ -2683,6 +2683,7 @@ dependencies = [
  "cosmic-text 0.12.1",
  "env_logger",
  "etagere",
+ "image",
  "log",
  "png",
  "pollster",
