@@ -243,9 +243,9 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   // --- prepareLookups ---
 
   let ppem = font_face.units_per_em();
-  let scale = ATLAS_FONT_SIZE as f32 / ppem as f32;
+  let scale_factor = ATLAS_FONT_SIZE as f32 / ppem as f32;
 
-  let transform = |x: f32| -> f32 { (x * scale).ceil() };
+  let transform = |x: f32| -> f32 { (x * scale_factor).ceil() };
   let sizes = glyphs
     .iter()
     .map(|gly| {
