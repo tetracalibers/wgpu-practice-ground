@@ -350,8 +350,8 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   for (i, glyph) in positioned_glyphs.iter().enumerate() {
     glyph.draw(|x, y, v| {
       let (at_x, at_y) = atlas_positions[i];
-      let x = x as f32 + at_x as f32 + ATLAS_GAP as f32;
-      let y = y as f32 + at_y as f32 + ATLAS_GAP as f32;
+      let x = at_x as f32 + x as f32 + ATLAS_GAP as f32;
+      let y = at_y as f32 + y as f32 + ATLAS_GAP as f32;
       println!("x: {}, y: {}, v: {}", x, y, v);
       bitmap[(x as usize) + (y as usize) * atlas_size as usize] =
         (v * 255.0) as u8;
