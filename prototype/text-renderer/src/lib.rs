@@ -215,7 +215,6 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   let glyf = tables.glyf.unwrap();
   let hmtx = tables.hmtx.unwrap();
-  let head = tables.head;
 
   let num_glyphs = glyph_ids.len();
 
