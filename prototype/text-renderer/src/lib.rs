@@ -407,12 +407,9 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let padding = (ATLAS_GAP * font_size) / ATLAS_FONT_SIZE;
 
   let mut cursor_x = 0.;
-  let char_rects = glyph_ids
+  let char_rects = glyphs
     .iter()
-    .map(|glyph_id| {
-      let glyph = glyph_map
-        .get(&glyph_id)
-        .expect(std::format!("unknown glyph: {:?}", glyph_id).as_str());
+    .map(|glyph| {
       let Glyph {
         y,
         width,
