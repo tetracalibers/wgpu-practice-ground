@@ -266,16 +266,17 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let scale_factor = ATLAS_FONT_SIZE as f32 / ppem as f32;
 
   let transform = |x: f32| -> f32 { (x * scale_factor).ceil() };
-  let sizes = glyphs
+  let sizes = glyph_map
     .iter()
-    .map(|gly| {
+    .map(|(id, gly)| {
       let x = transform(gly.width as f32) as u16;
       let y = transform(gly.height as f32) as u16;
-      (x + ATLAS_GAP * 2, y + ATLAS_GAP * 2)
+      let size = (x + ATLAS_GAP * 2, y + ATLAS_GAP * 2);
+      (id, size)
     })
-    .collect::<Vec<_>>();
+    .collect::<HashMap<_, _>>();
 
-  let glyph_size = ATLAS_FONT_SIZE as f32;
+  let glyph_size = ATLAS_FONT_SIZE as f32 * 2.;
   println!("glyph_size: {}", glyph_size);
   // glyph_size * glyph_size が 1グリフの面積となる
   let atlas_size =
@@ -293,8 +294,11 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   // TODO: キャッシュの仕組みを用意し、allocateがNoneの場合に対応する
   let allocations = sizes
     .iter()
-    .map(|(w, h)| atlas.allocate(size2(*w as i32, *h as i32)).unwrap())
-    .collect::<Vec<_>>();
+    .map(|(id, (w, h))| {
+      let alloc = atlas.allocate(size2(*w as i32, *h as i32)).unwrap();
+      (*id, alloc)
+    })
+    .collect::<HashMap<_, _>>();
 
   let mut atlas_svg =
     std::fs::File::create(std::format!("export/font-atlas-v{}.svg", version))?;
@@ -302,15 +306,16 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   let atlas_positions = allocations
     .iter()
-    .map(|alloc| {
+    .map(|(id, alloc)| {
       let rect = alloc.rectangle.to_rect();
-      (rect.origin.x, rect.origin.y)
+      let loc = (rect.origin.x, rect.origin.y);
+      (**id, loc)
     })
-    .collect::<Vec<_>>();
+    .collect::<HashMap<_, _>>();
 
   //println!("atlas_positions: {:?}", atlas_positions);
 
-  for alloc in allocations {
+  for (_, alloc) in allocations {
     //if let Some(alloc) = alloc {
     atlas.deallocate(alloc.id);
     //}
@@ -318,12 +323,11 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   let uv_map = glyph_map
     .keys()
-    .enumerate()
-    .map(|(i, g_id)| {
-      let (w, h) = sizes[i];
-      let (x, y) = atlas_positions[i];
-      let (w, h) = (w as f32, h as f32);
-      let (x, y) = (x as f32, y as f32);
+    .map(|g_id| {
+      let (w, h) = sizes.get(g_id).unwrap();
+      let (x, y) = atlas_positions.get(&g_id).unwrap();
+      let (w, h) = (*w as f32, *h as f32);
+      let (x, y) = (*x as f32, *y as f32);
       let (w, h) = (w / atlas_size as f32, h / atlas_size as f32);
       let (x, y) = (x / atlas_size as f32, y / atlas_size as f32);
       let vec4 = (x, y, w, h);
@@ -347,19 +351,19 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
       let gl = gl.positioned(rusttype::point(0., 0.));
       let next = gl;
       *last = Some(next.id());
-      Some(next)
+      Some((next.id(), next))
     })
-    .collect::<Vec<_>>();
+    .collect::<HashMap<_, _>>();
 
   let mut bitmap = vec![0u8; (atlas_size * atlas_size) as usize];
 
   // println!("atlas_size: {}, bitmap.len(): {}", atlas_size, bitmap.len());
 
-  for (i, glyph) in positioned_glyphs.iter().enumerate() {
+  for (g_id, glyph) in positioned_glyphs.iter() {
     glyph.draw(|x, y, v| {
-      let (at_x, at_y) = atlas_positions[i];
-      let x = at_x as f32 + x as f32;
-      let y = at_y as f32 + y as f32;
+      let (at_x, at_y) = atlas_positions.get(&ttf::GlyphId(g_id.0)).unwrap();
+      let x = *at_x as f32 + x as f32;
+      let y = *at_y as f32 + y as f32;
       let pos = (x as usize) + (y as usize) * atlas_size as usize;
       bitmap[pos] = (v * 255.0) as u8;
     });
