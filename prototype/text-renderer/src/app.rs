@@ -18,6 +18,7 @@ pub struct Application<'a> {
   font_atlas_data: Vec<u8>,
   char_rects: Vec<(f32, f32, f32, f32)>,
   origin: [f32; 2],
+  font_size: f32,
   color: [f32; 4],
   uvs: Vec<[f32; 4]>,
 }
@@ -28,6 +29,7 @@ impl<'a> Application<'a> {
     font_atlas_data: Vec<u8>,
     char_rects: Vec<(f32, f32, f32, f32)>,
     origin: [f32; 2],
+    font_size: f32,
     color: [f32; 4],
     uvs: Vec<[f32; 4]>,
   ) -> Self {
@@ -37,6 +39,7 @@ impl<'a> Application<'a> {
       font_atlas_data,
       char_rects,
       origin,
+      font_size,
       color,
       uvs,
     }
@@ -57,7 +60,13 @@ impl<'a> ApplicationHandler for Application<'a> {
 
     let mut state = pollster::block_on(WindowState::new(window));
     state.set_font(self.font_atlas_size, &self.font_atlas_data);
-    state.set_geometry(&self.char_rects, self.origin, self.color, &self.uvs);
+    state.set_geometry(
+      &self.char_rects,
+      self.origin,
+      self.font_size,
+      self.color,
+      &self.uvs,
+    );
 
     self.window_state = Some(state);
   }

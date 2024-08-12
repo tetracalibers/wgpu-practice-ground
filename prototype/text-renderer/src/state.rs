@@ -98,10 +98,11 @@ impl<'a> WindowState<'a> {
     &mut self,
     char_rects: &Vec<(f32, f32, f32, f32)>,
     origin: [f32; 2],
+    font_size: f32,
     color: [f32; 4],
     uvs: &Vec<[f32; 4]>,
   ) {
-    self.ui.text(char_rects, origin, 16., color, uvs);
+    self.ui.text(char_rects, origin, font_size, color, uvs);
   }
 
   pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

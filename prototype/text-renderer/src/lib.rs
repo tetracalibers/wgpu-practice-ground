@@ -464,6 +464,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     sdf,
     char_rects,
     [0., 0.],
+    font_size as f32,
     [1., 0.5, 1., 1.],
     uvs,
   );
