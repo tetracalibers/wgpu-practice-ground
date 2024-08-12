@@ -42,11 +42,7 @@ fn main() {
       rect_renderer::run().unwrap();
     }
     "prototype/text-renderer" => {
-      // TODO: change to text_renderer::run()
-      // text_renderer::try_cosmic_text().unwrap();
-      // text_renderer::try_etagere().unwrap();
-      //text_renderer::try_swash().unwrap();
-      //text_renderer::try_rusttype().unwrap();
+      //text_renderer::run().unwrap();
       text_renderer::proto().unwrap();
     }
     _ => {
