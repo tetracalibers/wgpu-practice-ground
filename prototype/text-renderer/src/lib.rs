@@ -178,6 +178,9 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   const ATLAS_GAP: u16 = 2;
   const ATLAS_RADIUS: u16 = ATLAS_FONT_SIZE / 6; // sometimes called `spread`
 
+  let text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let chars = text.chars();
+
   //let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
   //let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
   //let font_path = "./font/Crimson_Text/CrimsonText-Regular.ttf";
@@ -186,6 +189,15 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   // use ttf-parser
   let font_face = ttf::Face::parse(&font_data, 0)?;
+
+  let glyph_ids = text
+    .chars()
+    .map(|c| {
+      font_face
+        .glyph_index(c)
+        .expect(std::format!("unknown character: {}", c).as_str())
+    })
+    .collect::<Vec<_>>();
 
   // --- calculateGlyphQuads ---
 
@@ -203,19 +215,19 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   let glyf = tables.glyf.unwrap();
   let hmtx = tables.hmtx.unwrap();
+  let head = tables.head;
 
-  let num_glyphs = font_face.number_of_glyphs();
+  let num_glyphs = glyph_ids.len();
 
-  let glyphs = (0..num_glyphs)
-    .map(|id| {
-      let glyph_id = ttf::GlyphId(id);
-
+  let glyphs = glyph_ids
+    .iter()
+    .map(|glyph_id| {
       let ttf::Rect {
         x_min,
         x_max,
         y_min,
         y_max,
-      } = glyf.bbox(glyph_id).unwrap_or(ttf::Rect {
+      } = glyf.bbox(*glyph_id).unwrap_or(ttf::Rect {
         x_min: 0,
         x_max: 0,
         y_min: 0,
@@ -227,12 +239,12 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
       let width = x_max - x_min;
       let height = y_max - y_min;
 
-      let advance_width = hmtx.advance(glyph_id).unwrap_or(0) as i16;
-      let lsb = hmtx.side_bearing(glyph_id).unwrap_or(0);
+      let advance_width = hmtx.advance(*glyph_id).unwrap_or(0) as i16;
+      let lsb = hmtx.side_bearing(*glyph_id).unwrap_or(0);
       let rsb = advance_width - lsb - width;
 
       let glyph = Glyph {
-        id: glyph_id,
+        id: *glyph_id,
         x: x.into(),
         y: y.into(),
         width: width.into(),
@@ -328,12 +340,6 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   // The font size to use
   let scale = rusttype::Scale::uniform(ATLAS_FONT_SIZE as f32);
 
-  // all glyph
-  let chars = glyph_map.keys().map(|g_id| {
-    char::from_u32(g_id.0.into())
-      .expect(std::format!("invalid char: {}", g_id.0).as_str())
-  });
-
   let positioned_glyphs = font
     .glyphs_for(chars)
     .scan(None, |last, gl| {
@@ -392,20 +398,18 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   // --- getTextShape ---
 
-  let text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let font_size = 16;
 
   let cap_height = font_face.capital_height().unwrap_or(0);
   let padding = (ATLAS_GAP * font_size) / ATLAS_FONT_SIZE;
 
   let mut cursor_x = 0.;
-  let char_rects = text
-    .chars()
-    .filter(|c| glyph_map.contains_key(&ttf::GlyphId(*c as u16)))
-    .map(|c| {
+  let char_rects = glyph_ids
+    .iter()
+    .map(|glyph_id| {
       let glyph = glyph_map
-        .get(&ttf::GlyphId(c as u16))
-        .expect(std::format!("invalid char: {}", c).as_str());
+        .get(&glyph_id)
+        .expect(std::format!("unknown glyph: {:?}", glyph_id).as_str());
       let Glyph {
         y,
         width,
@@ -428,7 +432,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
     })
     .collect::<Vec<_>>();
 
-  println!("char_rects: {:?}", char_rects);
+  //println!("char_rects: {:?}", char_rects);
 
   let text_width = char_rects.last().map(|(x, _, w, _)| x + w).unwrap_or(0.);
   let text_height = (cap_height as f32 * font_size as f32) / ppem as f32;
@@ -440,12 +444,13 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   // --- rendering ---
 
-  let uvs = text
-    .chars()
-    .filter_map(|c| {
-      let g_id = ttf::GlyphId(c as u16);
-      let vec4 = uv_map.get(&g_id)?;
-      Some([vec4.0, vec4.1, vec4.2, vec4.3])
+  let uvs = glyph_ids
+    .iter()
+    .map(|g_id| {
+      let vec4 = uv_map
+        .get(&g_id)
+        .expect(std::format!("invalid g_id: {:?}", g_id).as_str());
+      [vec4.0, vec4.1, vec4.2, vec4.3]
     })
     .collect::<Vec<_>>();
 
