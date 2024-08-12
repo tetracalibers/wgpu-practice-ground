@@ -19,15 +19,21 @@ pub struct FontData {
 }
 
 pub struct UiRenderer {
+  viewport: (f32, f32),
   sampler: wgpu::Sampler,
   vertex_buffer: wgpu::Buffer,
   text_buffer: wgpu::Buffer,
   text_bind_group_layout: wgpu::BindGroupLayout,
   text_pipeline: wgpu::RenderPipeline,
+  glyph_data: Vec<f32>,
+  glyph_count: usize,
 }
 
 impl UiRenderer {
-  pub fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
+  pub fn new(
+    device: &wgpu::Device,
+    target_config: &wgpu::SurfaceConfiguration,
+  ) -> Self {
     let vertex_buffer_layout = wgpu::VertexBufferLayout {
       array_stride: 2 * std::mem::size_of::<f32>() as u64,
       step_mode: wgpu::VertexStepMode::Vertex,
@@ -117,7 +123,7 @@ impl UiRenderer {
           module: &text_module,
           entry_point: "fs_main",
           targets: &[Some(wgpu::ColorTargetState {
-            format,
+            format: target_config.format,
             blend: Some(wgpu::BlendState {
               color: wgpu::BlendComponent {
                 src_factor: wgpu::BlendFactor::SrcAlpha,
@@ -149,19 +155,48 @@ impl UiRenderer {
       });
 
     Self {
+      viewport: (target_config.width as f32, target_config.height as f32),
       sampler,
       vertex_buffer,
       text_buffer,
       text_bind_group_layout,
       text_pipeline,
+      glyph_data: vec![],
+      glyph_count: 0,
     }
   }
 
   pub fn init_font(
     &mut self,
     device: &wgpu::Device,
-    font_atlas_texture: &wgpu::Texture,
+    queue: &wgpu::Queue,
+    (font_atlas_width, font_atlas_height): (u32, u32),
+    font_atlas_data: &Vec<u8>,
   ) -> FontData {
+    let font_atlas_texture_desc = wgpu::TextureDescriptor {
+      label: Some("font atlas"),
+      size: wgpu::Extent3d {
+        width: font_atlas_width,
+        height: font_atlas_height,
+        depth_or_array_layers: 1,
+      },
+      mip_level_count: 1,
+      sample_count: 1,
+      dimension: wgpu::TextureDimension::D2,
+      format: wgpu::TextureFormat::R8Unorm,
+      usage: wgpu::TextureUsages::TEXTURE_BINDING
+        | wgpu::TextureUsages::COPY_DST
+        | wgpu::TextureUsages::RENDER_ATTACHMENT,
+      view_formats: &[],
+    };
+
+    let font_atlas_texture = device.create_texture_with_data(
+      queue,
+      &font_atlas_texture_desc,
+      wgpu::util::TextureDataOrder::default(),
+      &font_atlas_data,
+    );
+
     FontData {
       text_bind_group: device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("text"),
@@ -187,14 +222,37 @@ impl UiRenderer {
     }
   }
 
-  pub fn text(&self, text: Text) {
-    todo!()
+  pub fn set_viewport_size(&mut self, width: u32, height: u32) {
+    self.viewport = (width as f32, height as f32);
+  }
+
+  pub fn text(
+    &mut self,
+    char_rects: &Vec<(f32, f32, f32, f32)>,
+    [origin_x, origin_y]: [f32; 2],
+    font_size: f32,
+    [color_r, color_g, color_b, color_a]: [f32; 4],
+    uvs: &Vec<[f32; 4]>,
+  ) {
+    for (i, (x, y, w, h)) in char_rects.iter().enumerate() {
+      let (shape_x, shape_y) = (x + origin_x, y + origin_y);
+      let [uv_x, uv_y, uv_z, uv_w] = uvs[i];
+      let (viewport_w, viewport_h) = self.viewport;
+
+      let new_text = vec![
+        shape_x, shape_y, 0., font_size, color_r, color_g, color_b, color_a,
+        *w, *h, uv_x, uv_y, uv_z, uv_w, viewport_w, viewport_h,
+      ];
+
+      self.glyph_data.extend(new_text);
+      self.glyph_count += 1;
+    }
   }
 
   pub fn render(
     &mut self,
     encoder: &mut wgpu::CommandEncoder,
-    _queue: &wgpu::Queue,
+    queue: &wgpu::Queue,
     view: &wgpu::TextureView,
     font_data: &FontData,
   ) {
@@ -211,16 +269,27 @@ impl UiRenderer {
         ..Default::default()
       });
 
-    // TODO: render_pass.set_viewport()
-    // TODO: write text buffer
+    render_pass.set_viewport(
+      0.0,
+      0.0,
+      self.viewport.0,
+      self.viewport.1,
+      0.0,
+      1.0,
+    );
+
+    queue.write_buffer(
+      &self.text_buffer,
+      0,
+      bytemuck::cast_slice(self.glyph_data.as_slice()),
+    );
 
     render_pass.set_pipeline(&self.text_pipeline);
     render_pass.set_bind_group(0, &font_data.text_bind_group, &[]);
     render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-    render_pass.draw(0..6, 0..1 as u32); // TODO: change 1 to self.glyph_count
+    render_pass.draw(0..6, 0..self.glyph_count as u32);
 
-    // TODO:
-    // self.glyph_count = 0;
-    // self.glyph_data.clear();
+    //self.glyph_count = 0;
+    //self.glyph_data.clear();
   }
 }

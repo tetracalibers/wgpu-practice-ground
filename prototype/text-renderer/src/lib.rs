@@ -170,6 +170,8 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   use std::collections::HashMap;
   use ttf_parser as ttf;
 
+  env_logger::init();
+
   let version = 12;
 
   const ATLAS_FONT_SIZE: u16 = 48;
@@ -390,7 +392,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   // --- getTextShape ---
 
-  let text = "The quick brown fox jumps over the lazy dog";
+  let text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let font_size = 16;
 
   let cap_height = font_face.capital_height().unwrap_or(0);
@@ -399,6 +401,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let mut cursor_x = 0.;
   let char_rects = text
     .chars()
+    .filter(|c| glyph_map.contains_key(&ttf::GlyphId(*c as u16)))
     .map(|c| {
       let glyph = glyph_map
         .get(&ttf::GlyphId(c as u16))
@@ -434,6 +437,29 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let text_height = text_height.ceil() as u16;
 
   println!("text_width: {}, text_height: {}", text_width, text_height);
+
+  // --- rendering ---
+
+  let uvs = text
+    .chars()
+    .filter_map(|c| {
+      let g_id = ttf::GlyphId(c as u16);
+      let vec4 = uv_map.get(&g_id)?;
+      Some([vec4.0, vec4.1, vec4.2, vec4.3])
+    })
+    .collect::<Vec<_>>();
+
+  let event_loop = EventLoop::builder().build()?;
+  let mut app = Application::new(
+    (atlas_size as u32, atlas_size as u32),
+    sdf,
+    char_rects,
+    [0., 0.],
+    [1., 0.5, 1., 1.],
+    uvs,
+  );
+
+  event_loop.run_app(&mut app)?;
 
   Ok(())
 }
