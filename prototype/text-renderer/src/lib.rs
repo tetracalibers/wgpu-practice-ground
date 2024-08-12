@@ -388,5 +388,52 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let mut writer = encoder.write_header().unwrap();
   writer.write_image_data(&sdf).unwrap();
 
+  // --- getTextShape ---
+
+  let text = "The quick brown fox jumps over the lazy dog";
+  let font_size = 16;
+
+  let cap_height = font_face.capital_height().unwrap_or(0);
+  let padding = (ATLAS_GAP * font_size) / ATLAS_FONT_SIZE;
+
+  let mut cursor_x = 0.;
+  let char_rects = text
+    .chars()
+    .map(|c| {
+      let glyph = glyph_map
+        .get(&ttf::GlyphId(c as u16))
+        .expect(std::format!("invalid char: {}", c).as_str());
+      let Glyph {
+        y,
+        width,
+        height,
+        lsb,
+        rsb,
+        ..
+      } = glyph;
+
+      let pos_x = cursor_x as f32 + *lsb as f32 * scale_factor - padding as f32;
+      let pos_y = (cap_height as f32 - *y as f32 - *height as f32)
+        * scale_factor
+        - padding as f32;
+      let size_x = *width as f32 * scale_factor + padding as f32 * 2.;
+      let size_y = *height as f32 * scale_factor + padding as f32 * 2.;
+
+      cursor_x += (lsb + width + rsb) as f32 * scale_factor;
+
+      (pos_x, pos_y, size_x, size_y)
+    })
+    .collect::<Vec<_>>();
+
+  println!("char_rects: {:?}", char_rects);
+
+  let text_width = char_rects.last().map(|(x, _, w, _)| x + w).unwrap_or(0.);
+  let text_height = (cap_height as f32 * font_size as f32) / ppem as f32;
+
+  let text_width = text_width.ceil() as u16;
+  let text_height = text_height.ceil() as u16;
+
+  println!("text_width: {}, text_height: {}", text_width, text_height);
+
   Ok(())
 }
