@@ -2,6 +2,7 @@ mod app;
 mod atlas;
 mod lookup;
 mod renderer;
+mod sdf;
 mod state;
 
 use std::error::Error;
@@ -172,7 +173,8 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let version = 12;
 
   const ATLAS_FONT_SIZE: u16 = 48;
-  const ATLAS_GAP: u16 = 4;
+  const ATLAS_GAP: u16 = 2;
+  const ATLAS_RADIUS: u16 = ATLAS_FONT_SIZE / 6; // sometimes called `spread`
 
   //let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
   //let font_path = "./font/Poiret_One/PoiretOne-Regular.ttf";
@@ -343,16 +345,15 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   let mut bitmap = vec![0u8; (atlas_size * atlas_size) as usize];
 
-  println!("atlas_size: {}, bitmap.len(): {}", atlas_size, bitmap.len());
+  // println!("atlas_size: {}, bitmap.len(): {}", atlas_size, bitmap.len());
 
   for (i, glyph) in positioned_glyphs.iter().enumerate() {
     glyph.draw(|x, y, v| {
       let (at_x, at_y) = atlas_positions[i];
       let x = at_x as f32 + x as f32;
       let y = at_y as f32 + y as f32;
-      //println!("x: {}, y: {}, v: {}", x, y, v);
-      bitmap[(x as usize) + (y as usize) * atlas_size as usize] =
-        (v * 255.0) as u8;
+      let pos = (x as usize) + (y as usize) * atlas_size as usize;
+      bitmap[pos] = (v * 255.0) as u8;
     });
   }
 
@@ -366,6 +367,26 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   let mut writer = encoder.write_header().unwrap();
   writer.write_image_data(&bitmap).unwrap();
+
+  // --- toSDF ---
+
+  let sdf = crate::sdf::to_sdf(
+    &bitmap,
+    atlas_size as usize,
+    atlas_size as usize,
+    ATLAS_RADIUS as f64,
+  );
+
+  let atlas_sdf_file =
+    std::fs::File::create(std::format!("./export/atlas-svg-v{}.png", version))
+      .unwrap();
+  let ref mut w = std::io::BufWriter::new(atlas_sdf_file);
+
+  let mut encoder = png::Encoder::new(w, atlas_size as u32, atlas_size as u32);
+  encoder.set_color(png::ColorType::Grayscale);
+
+  let mut writer = encoder.write_header().unwrap();
+  writer.write_image_data(&sdf).unwrap();
 
   Ok(())
 }
