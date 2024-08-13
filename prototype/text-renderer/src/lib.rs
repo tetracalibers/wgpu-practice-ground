@@ -26,13 +26,13 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   env_logger::init();
 
-  let version = 12;
+  let version = 13;
 
   const ATLAS_FONT_SIZE: u16 = 48;
   const ATLAS_GAP: u16 = 2;
   const ATLAS_RADIUS: u16 = ATLAS_FONT_SIZE / 6; // sometimes called `spread`
 
-  let text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let text = "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let chars = text.chars();
 
   //let font_path = "./font/Sankofa_Display/SankofaDisplay-Regular.ttf";
@@ -46,12 +46,21 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   let glyph_ids = text
     .chars()
+    .filter(|c| !c.is_control())
     .map(|c| {
       font_face
         .glyph_index(c)
         .expect(std::format!("unknown character: {}", c).as_str())
     })
     .collect::<Vec<_>>();
+
+  let glyph_char_map = text
+    .chars()
+    .map(|c| {
+      let glyph_id = font_face.glyph_index(c);
+      (c, glyph_id)
+    })
+    .collect::<HashMap<_, _>>();
 
   // --- calculateGlyphQuads ---
 
@@ -212,7 +221,7 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
 
   // println!("atlas_size: {}, bitmap.len(): {}", atlas_size, bitmap.len());
 
-  for (g_id, glyph) in positioned_glyphs.iter() {
+  for (g_id, glyph) in &positioned_glyphs {
     glyph.draw(|x, y, v| {
       let (at_x, at_y) = atlas_positions.get(&ttf::GlyphId(g_id.0)).unwrap();
       let x = *at_x as f32 + x as f32;
@@ -258,12 +267,32 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
   let font_size = 16;
 
   let cap_height = font_face.capital_height().unwrap_or(0);
+  let line_height = font_face.height() as f32;
   let padding = (ATLAS_GAP * font_size) / ATLAS_FONT_SIZE;
 
   let mut cursor_x = 0.;
-  let char_rects = glyphs
-    .iter()
-    .map(|glyph| {
+  let mut cursor_y = 0.;
+
+  let char_rects = text
+    .chars()
+    .filter_map(|c| {
+      let g_id = glyph_char_map.get(&c).unwrap();
+
+      if g_id.is_none() {
+        if c.is_control() {
+          match c {
+            '\n' => {
+              cursor_x = 0.;
+              cursor_y += line_height as f32 * scale_factor;
+            }
+            _ => {}
+          }
+        }
+        return None;
+      }
+
+      let g_id = g_id.unwrap();
+      let glyph = glyph_map.get(&g_id).unwrap();
       let Glyph {
         y,
         width,
@@ -274,27 +303,17 @@ pub fn proto() -> Result<(), Box<dyn Error>> {
       } = glyph;
 
       let pos_x = cursor_x as f32 + *lsb as f32 * scale_factor - padding as f32;
-      let pos_y = (cap_height as f32 - *y as f32 - *height as f32)
-        * scale_factor
+      let pos_y = cursor_y
+        + (cap_height as f32 - *y as f32 - *height as f32) * scale_factor
         - padding as f32;
       let size_x = *width as f32 * scale_factor + padding as f32 * 2.;
       let size_y = *height as f32 * scale_factor + padding as f32 * 2.;
 
       cursor_x += (lsb + width + rsb) as f32 * scale_factor;
 
-      (pos_x, pos_y, size_x, size_y)
+      Some((pos_x, pos_y, size_x, size_y))
     })
     .collect::<Vec<_>>();
-
-  //println!("char_rects: {:?}", char_rects);
-
-  let text_width = char_rects.last().map(|(x, _, w, _)| x + w).unwrap_or(0.);
-  let text_height = (cap_height as f32 * font_size as f32) / ppem as f32;
-
-  let text_width = text_width.ceil() as u16;
-  let text_height = text_height.ceil() as u16;
-
-  println!("text_width: {}, text_height: {}", text_width, text_height);
 
   // --- rendering ---
 
