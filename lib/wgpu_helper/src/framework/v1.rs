@@ -1,15 +1,31 @@
-use std::{sync::Arc, time};
+use std::{future::Future, sync::Arc, time};
 
 use anyhow::Result;
 use winit::{
   application::ApplicationHandler,
+  dpi::PhysicalSize,
   event::{ElementState, KeyEvent, WindowEvent},
   event_loop::{ActiveEventLoop, EventLoop},
   keyboard::{KeyCode, PhysicalKey},
   window::{Window, WindowId},
 };
 
-use crate::render::Render;
+#[allow(opaque_hidden_inferred_bound)]
+pub trait Render {
+  type DrawData;
+  type InitialState;
+
+  fn new(
+    window: Arc<Window>,
+    draw_data: &Self::DrawData,
+    initial_state: &Self::InitialState,
+  ) -> impl Future<Output = Self>;
+  fn get_size(&self) -> PhysicalSize<u32>;
+  fn resize(&mut self, size: PhysicalSize<u32>);
+  fn process_event(&mut self, event: &WindowEvent) -> bool;
+  fn update(&mut self, dt: time::Duration);
+  fn draw(&mut self) -> Result<(), wgpu::SurfaceError>;
+}
 
 pub struct App<'a, R>
 where

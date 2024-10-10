@@ -3413,7 +3413,9 @@ dependencies = [
 name = "wgpu_helper"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cgmath",
+ "pollster",
  "wgpu 22.1.0",
  "winit",
 ]

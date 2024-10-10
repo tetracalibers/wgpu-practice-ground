@@ -1,16 +1,12 @@
-mod app;
-mod render;
-
 use std::{iter, mem};
 use std::{sync::Arc, time};
 
 use anyhow::Result;
-use app::App;
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
 use enum_rotate::EnumRotate;
-use render::Render;
 use wgpu::util::DeviceExt;
+use wgpu_helper::framework::v1::{App, Render};
 use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
