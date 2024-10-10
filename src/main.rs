@@ -1,52 +1,36 @@
-use std::env;
+use std::{env, error::Error};
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
   let args: Vec<String> = env::args().collect();
 
   if args.len() < 2 {
     eprintln!("Usage: {} <workspace_member>", args[0]);
-    return;
+    return Ok(());
   }
 
   let target = &args[1];
 
   match target.as_str() {
-    "tutorial/ch01-window" => {
-      ch01_window::run().unwrap();
-    }
-    "tutorial/ch02-surface" => {
-      ch02_surface::run().unwrap();
-    }
-    "tutorial/ch03-pipeline" => {
-      ch03_pipeline::run().unwrap();
-    }
-    "tutorial/ch04-buffer" => {
-      ch04_buffer::run().unwrap();
-    }
-    "tutorial/ch05-indice" => {
-      ch05_indice::run().unwrap();
-    }
-    "tutorial/ch06-texture" => {
-      ch06_texture::run().unwrap();
-    }
-    "tutorial/life-game" => {
-      life_game::run().unwrap();
-    }
+    "tutorial/ch01-window" => ch01_window::run(),
+    "tutorial/ch02-surface" => ch02_surface::run(),
+    "tutorial/ch03-pipeline" => ch03_pipeline::run(),
+    "tutorial/ch04-buffer" => ch04_buffer::run(),
+    "tutorial/ch05-indice" => ch05_indice::run(),
+    "tutorial/ch06-texture" => ch06_texture::run(),
+    "tutorial/life-game" => life_game::run(),
     "export-gif:tutorial/life-game" => {
       life_game::export_gif();
+      Ok(())
     }
-    "tutorial/hello-glyphon" => {
-      hello_glyphon::run().unwrap();
-    }
-    "prototype/rect-renderer" => {
-      rect_renderer::run().unwrap();
-    }
-    "prototype/text-renderer" => {
-      //text_renderer::run().unwrap();
-      text_renderer::proto().unwrap();
+    "tutorial/hello-glyphon" => hello_glyphon::run(),
+    "prototype/rect-renderer" => rect_renderer::run(),
+    "prototype/text-renderer" => text_renderer::proto(),
+    "practice/cube_blinn_phong" => {
+      Ok(cube_blinn_phong::run("cube_blinn_phong")?)
     }
     _ => {
       eprintln!("Not found: {}", target);
+      Ok(())
     }
   }
 }
