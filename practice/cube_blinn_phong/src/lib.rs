@@ -1,20 +1,22 @@
-use std::{future::Future, sync::Arc, time};
+mod app;
+mod render;
+
 use std::{iter, mem};
+use std::{sync::Arc, time};
 
 use anyhow::Result;
+use app::App;
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
 use enum_rotate::EnumRotate;
+use render::Render;
 use wgpu::util::DeviceExt;
 use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
 use wgpu_helper::wgpu_simplified as ws;
-use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent};
-use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
-use winit::window::WindowId;
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
 
 fn create_vertices() -> (Vec<Vertex>, Vec<u16>, Vec<u16>) {
@@ -70,130 +72,6 @@ pub fn run(title: &str) -> Result<()> {
   Ok(())
 }
 
-struct App<'a, R>
-where
-  R: Render,
-{
-  window: Option<Arc<Window>>,
-  window_title: &'a str,
-  inputs: Inputs,
-  initial: Initial,
-  handler: Option<R>,
-  render_start_time: Option<time::Instant>,
-}
-
-impl<'a, R: Render> App<'a, R> {
-  pub fn new(window_title: &'a str, inputs: Inputs, initial: Initial) -> Self {
-    Self {
-      window: None,
-      window_title,
-      inputs,
-      initial,
-      handler: None,
-      render_start_time: None,
-    }
-  }
-
-  pub fn run(&mut self) -> Result<()> {
-    let event_loop = EventLoop::builder().build()?;
-    event_loop.run_app(self)?;
-
-    Ok(())
-  }
-
-  fn window(&self) -> Option<&Window> {
-    match &self.window {
-      Some(window) => Some(window.as_ref()),
-      None => None,
-    }
-  }
-}
-
-impl<'a, R: Render> ApplicationHandler for App<'a, R> {
-  fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-    let window_attributes =
-      Window::default_attributes().with_title(self.window_title);
-    let window = event_loop.create_window(window_attributes).unwrap();
-    self.window = Some(Arc::new(window));
-
-    let handler = R::new(
-      Arc::clone(self.window.as_ref().unwrap()),
-      &self.inputs,
-      &self.initial,
-    );
-    let handler = pollster::block_on(handler);
-    self.handler = Some(handler);
-
-    self.render_start_time = Some(time::Instant::now());
-  }
-
-  fn window_event(
-    &mut self,
-    event_loop: &ActiveEventLoop,
-    window_id: WindowId,
-    event: WindowEvent,
-  ) {
-    let binding = self.window();
-    let window = match &binding {
-      Some(window) => window,
-      None => return,
-    };
-    if window.id() != window_id {
-      return;
-    }
-
-    let handler = match &mut self.handler {
-      Some(handler) => handler,
-      None => return,
-    };
-    if handler.process_event(&event) {
-      return;
-    }
-
-    match event {
-      WindowEvent::Resized(size) => {
-        handler.resize(size);
-      }
-      WindowEvent::RedrawRequested => {
-        let now = time::Instant::now();
-        let dt = now - self.render_start_time.unwrap_or(now);
-        handler.update(dt);
-
-        match handler.draw() {
-          Ok(()) => {}
-          Err(wgpu::SurfaceError::Lost) => handler.resize(handler.get_size()),
-          Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
-          Err(e) => eprintln!("{:?}", e),
-        }
-      }
-      WindowEvent::CloseRequested => {
-        event_loop.exit();
-      }
-      WindowEvent::KeyboardInput {
-        event:
-          KeyEvent {
-            physical_key: PhysicalKey::Code(KeyCode::Escape),
-            state: ElementState::Pressed,
-            ..
-          },
-        ..
-      } => {
-        event_loop.exit();
-      }
-      _ => {}
-    }
-  }
-
-  fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-    let binding = self.window();
-    let window = match &binding {
-      Some(window) => window,
-      None => return,
-    };
-    window.request_redraw();
-  }
-}
-
 #[derive(Clone, Copy, EnumRotate)]
 enum PlotMode {
   Shape,
@@ -220,35 +98,29 @@ struct Initial {
   pub rotation_speed: f32,
 }
 
-#[allow(opaque_hidden_inferred_bound)]
-trait Render {
-  fn new(
-    window: Arc<Window>,
-    inputs: &Inputs,
-    initial: &Initial,
-  ) -> impl Future<Output = Self>;
-  fn get_size(&self) -> PhysicalSize<u32>;
-  fn resize(&mut self, size: PhysicalSize<u32>);
-  fn process_event(&mut self, event: &WindowEvent) -> bool;
-  fn update(&mut self, dt: time::Duration);
-  fn draw(&mut self) -> Result<(), wgpu::SurfaceError>;
-}
-
 struct State<'a> {
+  /// drawing context
   init: ws::WgpuInit<'a>,
   pipelines: Vec<wgpu::RenderPipeline>,
+
+  /// drawing data
   vertex_buffer: wgpu::Buffer,
   index_buffers: Vec<wgpu::Buffer>,
+  indices_lens: Vec<u32>,
   uniform_bind_groups: Vec<wgpu::BindGroup>,
   uniform_buffers: Vec<wgpu::Buffer>,
-  view_mat: Matrix4<f32>,
-  project_mat: Matrix4<f32>,
   msaa_texture_view: wgpu::TextureView,
   depth_texture_view: wgpu::TextureView,
-  indices_lens: Vec<u32>,
+
+  /// transformation matrices
+  view_mat: Matrix4<f32>,
+  project_mat: Matrix4<f32>,
+
+  /// rendering settings
   plot_mode: PlotMode,
   rotation_speed: f32,
 
+  /// lighting parameters
   ambient: f32,
   diffuse: f32,
   specular: f32,
@@ -256,6 +128,9 @@ struct State<'a> {
 }
 
 impl<'a> Render for State<'a> {
+  type DrawData = Inputs;
+  type InitialState = Initial;
+
   async fn new(
     window: Arc<Window>,
     inputs: &Inputs,
