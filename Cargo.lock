@@ -145,9 +145,18 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.86"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
+checksum = "86fdf8605db99b54d3cd748a44c6d04df638eb5dafb219b135d0149bd0db01f6"
+
+[[package]]
+name = "approx"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
+dependencies = [
+ "num-traits",
+]
 
 [[package]]
 name = "arbitrary"
@@ -320,9 +329,9 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 
 [[package]]
 name = "bytemuck"
-version = "1.16.1"
+version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b236fc92302c97ed75b38da1f4917b5cdda4984745740f153a5d3059e48d725e"
+checksum = "94bbb0ad554ad961ddc5da507a12a29b14e4ae5bda06b19f575a3e6079d2e2ae"
 dependencies = [
  "bytemuck_derive",
 ]
@@ -421,6 +430,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "cgmath"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a98d30140e3296250832bbaaff83b27dcd6fa3cc70fb6f1f3e5c9c0023b5317"
+dependencies = [
+ "approx",
+ "num-traits",
+]
+
+[[package]]
 name = "ch01-window"
 version = "0.1.0"
 dependencies = [
@@ -436,7 +455,7 @@ dependencies = [
  "env_logger",
  "log",
  "pollster",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -447,7 +466,7 @@ dependencies = [
  "env_logger",
  "log",
  "pollster",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -459,7 +478,7 @@ dependencies = [
  "env_logger",
  "log",
  "pollster",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -471,7 +490,7 @@ dependencies = [
  "env_logger",
  "log",
  "pollster",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -485,7 +504,7 @@ dependencies = [
  "image",
  "log",
  "pollster",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -663,6 +682,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
+name = "cube_blinn_phong"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cgmath",
+ "enum-rotate",
+ "env_logger",
+ "pollster",
+ "rand",
+ "wgpu 22.1.0",
+ "wgpu_helper",
+ "winit",
+]
+
+[[package]]
 name = "cursor-icon"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -688,6 +723,18 @@ dependencies = [
  "bitflags 2.6.0",
  "libloading 0.8.5",
  "winapi",
+]
+
+[[package]]
+name = "derive-enum-rotate"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb69c96217718dc407cf4c3dfc3c7b7ac6aab7b442a32f28d5ba42c8c25ff0fa"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.71",
 ]
 
 [[package]]
@@ -733,6 +780,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
+name = "enum-rotate"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d045e4e2199a12df973ea60fe7657038c4d46536b0a48fa01e3eb8141f9d785"
+dependencies = [
+ "derive-enum-rotate",
+]
+
+[[package]]
 name = "env_filter"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -744,9 +800,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.3"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b35839ba51819680ba087cd351788c9a3c476841207e0b8cee0b04722343b9"
+checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1361,7 +1417,7 @@ dependencies = [
  "log",
  "pollster",
  "rand",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -2050,6 +2106,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2245,7 +2325,7 @@ dependencies = [
  "env_logger",
  "log",
  "pollster",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -2633,7 +2713,7 @@ dependencies = [
  "pollster",
  "rusttype",
  "ttf-parser 0.24.1",
- "wgpu 22.0.0",
+ "wgpu 22.1.0",
  "winit",
 ]
 
@@ -3126,9 +3206,9 @@ dependencies = [
 
 [[package]]
 name = "wgpu"
-version = "22.0.0"
+version = "22.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c87e07e87a179614940ad845397e03201847453a37b43a31a3b54eee2e6e32ce"
+checksum = "e1d1c4ba43f80542cf63a0a6ed3134629ae73e8ab51e4b765a67f3aa062eb433"
 dependencies = [
  "arrayvec",
  "cfg_aliases 0.1.1",
@@ -3300,6 +3380,7 @@ dependencies = [
  "ch04-buffer",
  "ch05-indice",
  "ch06-texture",
+ "cube_blinn_phong",
  "hello-glyphon",
  "life-game",
  "rect-renderer",
@@ -3326,6 +3407,17 @@ dependencies = [
  "bitflags 2.6.0",
  "js-sys",
  "web-sys",
+]
+
+[[package]]
+name = "wgpu_helper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cgmath",
+ "pollster",
+ "wgpu 22.1.0",
+ "winit",
 ]
 
 [[package]]
@@ -3364,6 +3456,15 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "window_app"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "winit",
+]
 
 [[package]]
 name = "windows"
@@ -3582,9 +3683,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winit"
-version = "0.30.4"
+version = "0.30.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4225ddd8ab67b8b59a2fee4b34889ebf13c0460c1c3fa297c58e21eb87801b33"
+checksum = "0be9e76a1f1077e04a411f0b989cbd3c93339e1771cb41e71ac4aee95bfd2c67"
 dependencies = [
  "ahash",
  "android-activity",

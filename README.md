@@ -45,3 +45,7 @@ cargo run -- prototype/rect-renderer
 ```bash
 cargo run -- prototype/text-renderer
 ```
+
+```bash
+cargo run -- practice/cube_blinn_phong 4
+```
