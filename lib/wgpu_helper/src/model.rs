@@ -25,15 +25,15 @@ where
 
 #[derive(Deserialize, Debug)]
 pub struct Model {
-  vertex_count: usize,
-  face_count: usize,
+  pub vertex_count: u64,
+  pub face_count: usize,
   #[serde(deserialize_with = "from_string_vec_f64")]
-  position: Vec<f64>,
+  pub position: Vec<f64>,
   #[serde(deserialize_with = "from_string_vec_f64")]
-  normal: Vec<f64>,
+  pub normal: Vec<f64>,
   #[serde(deserialize_with = "from_string_vec_f64")]
-  uv: Vec<f64>,
-  indices: Vec<u32>,
+  pub uv: Vec<f64>,
+  pub indices: Vec<u32>,
 }
 
 pub fn load_model_json<P: AsRef<Path>>(
