@@ -5,7 +5,7 @@ use std::{iter, mem, time};
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
-use wgpu::util::DeviceExt;
+use wgpu_helper::buffer::BufferBuilder;
 use wgpu_helper::framework::v1::{App, Render};
 use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
@@ -166,46 +166,25 @@ impl<'a> Render for State<'a> {
 
     let light_position: &[f32; 3] = initial.camera_position.as_ref();
     let eye_position: &[f32; 3] = initial.camera_position.as_ref();
+    let specular_color: &[f32; 3] = &initial.specular_color;
+    let object_color: &[f32; 3] = &initial.object_color;
 
-    let light_uniform_buffer =
-      init.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Light Uniform Buffer"),
-        size: (mem::size_of::<[f32; 4]>() * 4) as wgpu::BufferAddress,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-      });
-    init.queue.write_buffer(
-      &light_uniform_buffer,
-      4 * 4 * 0,
-      bytemuck::cast_slice(light_position),
-    );
-    init.queue.write_buffer(
-      &light_uniform_buffer,
-      4 * 4 * 1,
-      bytemuck::cast_slice(eye_position),
-    );
-    init.queue.write_buffer(
-      &light_uniform_buffer,
-      4 * 4 * 2,
-      bytemuck::cast_slice(initial.specular_color.as_ref()),
-    );
-    init.queue.write_buffer(
-      &light_uniform_buffer,
-      4 * 4 * 3,
-      bytemuck::cast_slice(initial.object_color.as_ref()),
-    );
+    let mut light_uniform_buffer = BufferBuilder::new()
+      .set_label("Light Uniform Buffer")
+      .uniform()
+      .copy_dst()
+      .build_empty(&init.device, 4 * 4);
 
-    let material_uniform_buffer =
-      init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Material Uniform Buffer"),
-        contents: bytemuck::cast_slice(initial.material.as_array().as_ref()),
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-      });
-    init.queue.write_buffer(
-      &material_uniform_buffer,
-      0,
-      bytemuck::cast_slice(&initial.material.as_array()),
-    );
+    light_uniform_buffer.write_buffer(&init.queue, 4 * 0, light_position);
+    light_uniform_buffer.write_buffer(&init.queue, 4 * 1, eye_position);
+    light_uniform_buffer.write_buffer(&init.queue, 4 * 2, specular_color);
+    light_uniform_buffer.write_buffer(&init.queue, 4 * 3, object_color);
+
+    let material_uniform_buffer = BufferBuilder::new()
+      .set_label("Material Uniform Buffer")
+      .uniform()
+      .copy_dst()
+      .build(&init.device, initial.material.as_array().as_ref());
 
     let (vert_bind_group_layout, vert_bind_group) =
       ws::create_uniform_bind_group(
@@ -247,30 +226,26 @@ impl<'a> Render for State<'a> {
     let msaa_texture_view = ws::create_msaa_texture_view(&init);
     let depth_texture_view = ws::create_depth_view(&init);
 
-    let vertex_buffer =
-      init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&model.vertex_data),
-        usage: wgpu::BufferUsages::VERTEX,
-      });
+    let vertex_buffer = BufferBuilder::new()
+      .set_label("Vertex Buffer")
+      .vertex()
+      .build(&init.device, model.vertex_data.as_slice());
 
-    let index_buffer =
-      init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Index Buffer"),
-        contents: bytemuck::cast_slice(&model.index_data),
-        usage: wgpu::BufferUsages::INDEX,
-      });
+    let index_buffer = BufferBuilder::new()
+      .set_label("Index Buffer")
+      .index()
+      .build(&init.device, model.index_data.as_slice());
 
     Self {
       init,
       pipeline,
-      vertex_buffer,
-      index_buffer,
+      vertex_buffer: vertex_buffer.into(),
+      index_buffer: index_buffer.into(),
       uniform_bind_groups: vec![vert_bind_group, frag_bind_group],
       uniform_buffers: vec![
-        matrix_uniform_buffer,
-        light_uniform_buffer,
-        material_uniform_buffer,
+        matrix_uniform_buffer.into(),
+        light_uniform_buffer.into(),
+        material_uniform_buffer.into(),
       ],
       view_mat,
       project_mat,

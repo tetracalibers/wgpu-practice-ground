@@ -1,3 +1,4 @@
+pub mod buffer;
 pub mod framework;
 pub mod model;
 pub mod transforms;

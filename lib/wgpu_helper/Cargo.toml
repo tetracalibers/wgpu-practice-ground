@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow     = "1.0.89"
+bytemuck   = "1.18.0"
 cgmath     = "0.18.0"
 pollster   = "0.3.0"
 serde      = { version = "1.0.210", features = ["derive"] }
