@@ -5,7 +5,7 @@ use std::{iter, mem, time};
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
-use wgpu_helper::buffer::BufferBuilder;
+use wgpu_helper::buffer::{Buffer, BufferBuilder};
 use wgpu_helper::framework::v1::{App, Render};
 use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
@@ -156,13 +156,11 @@ impl<'a> Render for State<'a> {
     let project_mat =
       wt::create_perspective_mat(Rad(2. * PI / 5.), aspect, 1., 1000.);
 
-    let matrix_uniform_buffer =
-      init.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Matrix Uniform Buffer"),
-        size: (mem::size_of::<[f32; 16]>() * 3) as wgpu::BufferAddress,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-      });
+    let matrix_uniform_buffer: Buffer<f32> = BufferBuilder::new()
+      .set_label("Matrix Uniform Buffer")
+      .uniform()
+      .copy_dst()
+      .build_empty(&init.device, 16 * 3);
 
     let light_position: &[f32; 3] = initial.camera_position.as_ref();
     let eye_position: &[f32; 3] = initial.camera_position.as_ref();
