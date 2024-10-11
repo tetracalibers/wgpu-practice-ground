@@ -1,0 +1,14 @@
+[package]
+name    = "low_poly_stanford_bunny"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow      = "1.0.89"
+bytemuck    = "1.18.0"
+cgmath      = "0.18.0"
+env_logger  = "0.11.5"
+wgpu        = "22.1.0"
+winit       = "0.30.5"
+wgpu_helper = { path = "../../lib/wgpu_helper" }
+pollster    = "0.3.0"
