@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use winit::window::Window;
 
-pub struct WgpuInit<'a> {
+pub struct WgpuContext<'a> {
   pub instance: wgpu::Instance,
   pub surface: wgpu::Surface<'a>,
   pub adapter: wgpu::Adapter,
@@ -13,7 +13,7 @@ pub struct WgpuInit<'a> {
   pub sample_count: u32,
 }
 
-impl<'a> WgpuInit<'a> {
+impl<'a> WgpuContext<'a> {
   pub async fn new(
     window: Arc<Window>,
     sample_count: u32,
@@ -109,7 +109,7 @@ impl<'a> Default for RenderSet<'a> {
 }
 
 impl RenderSet<'_> {
-  pub fn new(&mut self, init: &WgpuInit) -> wgpu::RenderPipeline {
+  pub fn new(&mut self, init: &WgpuContext) -> wgpu::RenderPipeline {
     if self.shader.is_some() {
       self.vs_shader = self.shader;
       self.fs_shader = self.shader;
@@ -220,7 +220,7 @@ pub fn create_color_attachment(
   }
 }
 
-pub fn create_msaa_texture_view(init: &WgpuInit) -> wgpu::TextureView {
+pub fn create_msaa_texture_view(init: &WgpuContext) -> wgpu::TextureView {
   let msaa_texture = init.device.create_texture(&wgpu::TextureDescriptor {
     label: None,
     size: wgpu::Extent3d {
@@ -253,7 +253,7 @@ pub fn create_msaa_color_attachment<'a>(
   }
 }
 
-pub fn create_depth_view(init: &WgpuInit) -> wgpu::TextureView {
+pub fn create_depth_view(init: &WgpuContext) -> wgpu::TextureView {
   let depth_texture = init.device.create_texture(&wgpu::TextureDescriptor {
     label: None,
     size: wgpu::Extent3d {
