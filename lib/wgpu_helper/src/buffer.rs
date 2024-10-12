@@ -89,7 +89,7 @@ impl<'a, C: bytemuck::Pod> BufferBuilder<'a, C> {
   ///
   /// Set the label of the buffer.
   ///
-  pub fn set_label(mut self, label: &'static str) -> Self {
+  pub fn set_label(mut self, label: &'a str) -> Self {
     self.label = Some(label);
     self
   }

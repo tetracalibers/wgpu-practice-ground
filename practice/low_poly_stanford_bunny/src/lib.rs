@@ -5,9 +5,11 @@ use std::{iter, mem, time};
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
-use wgpu_helper::buffer::{Buffer, BufferBuilder};
+use wgpu_helper::binding::*;
+use wgpu_helper::buffer::BufferBuilder;
 use wgpu_helper::framework::v1::{App, Render};
 use wgpu_helper::transforms as wt;
+use wgpu_helper::uniform::{Uniform, UniformBindGroup, UniformVec};
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
 use wgpu_helper::wgpu_simplified as ws;
@@ -116,12 +118,16 @@ struct State<'a> {
   init: ws::WgpuContext<'a>,
   pipeline: wgpu::RenderPipeline,
 
-  /// drawing data
+  /// model data
   vertex_buffer: wgpu::Buffer,
   index_buffer: wgpu::Buffer,
   indices_len: u32,
+
+  /// uniforms
   uniform_bind_groups: Vec<wgpu::BindGroup>,
-  uniform_buffers: Vec<wgpu::Buffer>,
+  matrix_uniform: UniformVec<[f32; 16]>,
+
+  /// textures
   msaa_texture_view: wgpu::TextureView,
   depth_texture_view: wgpu::TextureView,
 
@@ -156,50 +162,46 @@ impl<'a> Render for State<'a> {
     let project_mat =
       wt::create_perspective_mat(Rad(2. * PI / 5.), aspect, 1., 1000.);
 
-    let matrix_uniform_buffer: Buffer<f32> = BufferBuilder::new()
-      .set_label("Matrix Uniform Buffer")
-      .uniform()
-      .copy_dst()
-      .build_empty(&init.device, 16 * 3);
+    let matrix_uniform = UniformVec::new_empty(&init.device, 16 * 3);
 
-    let light_position: &[f32; 3] = initial.camera_position.as_ref();
-    let eye_position: &[f32; 3] = initial.camera_position.as_ref();
-    let specular_color: &[f32; 3] = &initial.specular_color;
-    let object_color: &[f32; 3] = &initial.object_color;
+    let light_position = initial.camera_position;
+    let eye_position = initial.camera_position;
 
-    let mut light_uniform_buffer = BufferBuilder::new()
-      .set_label("Light Uniform Buffer")
-      .uniform()
-      .copy_dst()
-      .build_empty(&init.device, 4 * 4);
+    let mut light_uniform = UniformVec::new_empty(&init.device, 4 * 4);
+    light_uniform.write_data(&init.queue, 0, light_position.into());
+    light_uniform.write_data(&init.queue, 1, eye_position.into());
+    light_uniform.write_data(&init.queue, 2, initial.object_color);
+    light_uniform.write_data(&init.queue, 3, initial.specular_color);
 
-    light_uniform_buffer.write_buffer(&init.queue, 4 * 0, light_position);
-    light_uniform_buffer.write_buffer(&init.queue, 4 * 1, eye_position);
-    light_uniform_buffer.write_buffer(&init.queue, 4 * 2, specular_color);
-    light_uniform_buffer.write_buffer(&init.queue, 4 * 3, object_color);
+    let material_uniform =
+      Uniform::new(initial.material.as_array(), &init.device);
 
-    let material_uniform_buffer = BufferBuilder::new()
-      .set_label("Material Uniform Buffer")
-      .uniform()
-      .copy_dst()
-      .build(&init.device, initial.material.as_array().as_ref());
-
-    let (vert_bind_group_layout, vert_bind_group) =
-      ws::create_uniform_bind_group(
+    let vert_bind_group_layout =
+      UniformBindGroup::<[f32; 16]>::create_bind_group_layout_vis(
         &init.device,
-        vec![wgpu::ShaderStages::VERTEX],
-        &[matrix_uniform_buffer.as_entire_binding()],
+        Some("vert_bind_group_layout"),
+        wgpu::ShaderStages::VERTEX,
       );
+    let vert_bind_group = BindGroupBuilder::new(&vert_bind_group_layout)
+      .push_resources(matrix_uniform.resources())
+      .build(&init.device, Some("vert_bind_group"));
 
-    let (frag_bind_group_layout, frag_bind_group) =
-      ws::create_uniform_bind_group(
-        &init.device,
-        vec![wgpu::ShaderStages::FRAGMENT, wgpu::ShaderStages::FRAGMENT],
-        &[
-          light_uniform_buffer.as_entire_binding(),
-          material_uniform_buffer.as_entire_binding(),
-        ],
-      );
+    let frag_bind_group_layout = BindGroupLayoutBuilder::new()
+      .push_entries(vec![
+        BindGroupLayoutEntry::new(
+          wgpu::ShaderStages::FRAGMENT,
+          wgsl::uniform(),
+        ),
+        BindGroupLayoutEntry::new(
+          wgpu::ShaderStages::FRAGMENT,
+          wgsl::uniform(),
+        ),
+      ])
+      .create(&init.device, Some("frag_bind_group_layout"));
+    let frag_bind_group = BindGroupBuilder::new(&frag_bind_group_layout)
+      .push_resources(light_uniform.resources())
+      .push_resources(material_uniform.resources())
+      .build(&init.device, Some("frag_bind_group"));
 
     let vertex_buffer_layout = wgpu::VertexBufferLayout {
       array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
@@ -209,7 +211,10 @@ impl<'a> Render for State<'a> {
     let pipeline_layout =
       init.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render Pipeline Layout"),
-        bind_group_layouts: &[&vert_bind_group_layout, &frag_bind_group_layout],
+        bind_group_layouts: &[
+          &vert_bind_group_layout.layout,
+          &frag_bind_group_layout.layout,
+        ],
         push_constant_ranges: &[],
       });
     let mut render = ws::RenderSet {
@@ -240,11 +245,7 @@ impl<'a> Render for State<'a> {
       vertex_buffer: vertex_buffer.into(),
       index_buffer: index_buffer.into(),
       uniform_bind_groups: vec![vert_bind_group, frag_bind_group],
-      uniform_buffers: vec![
-        matrix_uniform_buffer.into(),
-        light_uniform_buffer.into(),
-        material_uniform_buffer.into(),
-      ],
+      matrix_uniform,
       view_mat,
       project_mat,
       msaa_texture_view,
@@ -293,21 +294,9 @@ impl<'a> Render for State<'a> {
     let view_proj_ref: &[f32; 16] = view_proj_mat.as_ref();
     let normal_ref: &[f32; 16] = normal_mat.as_ref();
 
-    self.init.queue.write_buffer(
-      &self.uniform_buffers[0],
-      16 * 4 * 0,
-      bytemuck::cast_slice(view_proj_ref),
-    );
-    self.init.queue.write_buffer(
-      &self.uniform_buffers[0],
-      16 * 4 * 1,
-      bytemuck::cast_slice(model_ref),
-    );
-    self.init.queue.write_buffer(
-      &self.uniform_buffers[0],
-      16 * 4 * 2,
-      bytemuck::cast_slice(normal_ref),
-    );
+    self.matrix_uniform.write_data(&self.init.queue, 0, *view_proj_ref);
+    self.matrix_uniform.write_data(&self.init.queue, 1, *model_ref);
+    self.matrix_uniform.write_data(&self.init.queue, 2, *normal_ref);
   }
 
   fn draw(&mut self) -> anyhow::Result<(), wgpu::SurfaceError> {

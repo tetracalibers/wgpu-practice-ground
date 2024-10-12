@@ -1,8 +1,8 @@
 struct LightUniforms {
-  light_position: vec4f,
-  eye_position: vec4f,
-  color: vec4f,
-  specular_color: vec4f,
+  light_position: vec3f,
+  eye_position: vec3f,
+  color: vec3f,
+  specular_color: vec3f,
 }
 
 @binding(0) @group(1) var<uniform> light: LightUniforms;
