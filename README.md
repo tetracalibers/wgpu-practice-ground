@@ -51,5 +51,5 @@ cargo run -- practice/cube_blinn_phong 4
 ```
 
 ```bash
-cargo run -- practice/low_poly_stanford_bunny
+cargo run -- practice/rotate_cube_basic
 ```

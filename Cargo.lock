@@ -1465,20 +1465,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "low_poly_stanford_bunny"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytemuck",
- "cgmath",
- "env_logger",
- "pollster",
- "wgpu 22.1.0",
- "wgpu_helper",
- "winit",
-]
-
-[[package]]
 name = "lru"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2409,6 +2395,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ade4539f42266ded9e755c605bdddf546242b2c961b03b06a7375260788a0523"
 dependencies = [
  "bytemuck",
+]
+
+[[package]]
+name = "rotate_cube_basic"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cgmath",
+ "env_logger",
+ "pollster",
+ "wgpu 22.1.0",
+ "wgpu_helper",
+ "winit",
 ]
 
 [[package]]
@@ -3421,8 +3421,8 @@ dependencies = [
  "cube_blinn_phong",
  "hello-glyphon",
  "life-game",
- "low_poly_stanford_bunny",
  "rect-renderer",
+ "rotate_cube_basic",
  "text-renderer",
 ]
 

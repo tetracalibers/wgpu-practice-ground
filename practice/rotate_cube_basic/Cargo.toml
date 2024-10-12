@@ -1,5 +1,5 @@
 [package]
-name    = "low_poly_stanford_bunny"
+name    = "rotate_cube_basic"
 version = "0.1.0"
 edition = "2021"
 

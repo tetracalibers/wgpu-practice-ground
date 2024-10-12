@@ -28,8 +28,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     "practice/cube_blinn_phong" => {
       Ok(cube_blinn_phong::run("cube_blinn_phong")?)
     }
-    "practice/low_poly_stanford_bunny" => {
-      Ok(low_poly_stanford_bunny::run("low_poly_stanford_bunny")?)
+    "practice/rotate_cube_basic" => {
+      Ok(rotate_cube_basic::run("rotate_cube_basic")?)
     }
     _ => {
       eprintln!("Not found: {}", target);
