@@ -9,7 +9,7 @@ use wgpu_helper::binding::*;
 use wgpu_helper::buffer::BufferBuilder;
 use wgpu_helper::framework::v1::{App, Render};
 use wgpu_helper::transforms as wt;
-use wgpu_helper::uniform::{Uniform, UniformBindGroup, UniformVec};
+use wgpu_helper::uniform::{Uniform, UniformVec};
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
 use wgpu_helper::wgpu_simplified as ws;
@@ -176,12 +176,12 @@ impl<'a> Render for State<'a> {
     let material_uniform =
       Uniform::new(initial.material.as_array(), &init.device);
 
-    let vert_bind_group_layout =
-      UniformBindGroup::<[f32; 16]>::create_bind_group_layout_vis(
-        &init.device,
-        Some("vert_bind_group_layout"),
+    let vert_bind_group_layout = BindGroupLayoutBuilder::new()
+      .push_entries(vec![BindGroupLayoutEntry::new(
         wgpu::ShaderStages::VERTEX,
-      );
+        wgsl::uniform(),
+      )])
+      .create(&init.device, Some("vert_bind_group_layout"));
     let vert_bind_group = BindGroupBuilder::new(&vert_bind_group_layout)
       .push_resources(matrix_uniform.resources())
       .build(&init.device, Some("vert_bind_group"));
