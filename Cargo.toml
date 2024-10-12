@@ -4,17 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ch01-window      = { path = "./tutorial/ch01-window" }
-ch02-surface     = { path = "./tutorial/ch02-surface" }
-ch03-pipeline    = { path = "./tutorial/ch03-pipeline" }
-ch04-buffer      = { path = "./tutorial/ch04-buffer" }
-ch05-indice      = { path = "./tutorial/ch05-indice" }
-ch06-texture     = { path = "./tutorial/ch06-texture" }
-life-game        = { path = "./tutorial/life-game" }
-hello-glyphon    = { path = "./tutorial/hello-glyphon" }
-rect-renderer    = { path = "./prototype/rect-renderer" }
-text-renderer    = { path = "./prototype/text-renderer" }
-cube_blinn_phong = { path = "./practice/cube_blinn_phong" }
+ch01-window       = { path = "./tutorial/ch01-window" }
+ch02-surface      = { path = "./tutorial/ch02-surface" }
+ch03-pipeline     = { path = "./tutorial/ch03-pipeline" }
+ch04-buffer       = { path = "./tutorial/ch04-buffer" }
+ch05-indice       = { path = "./tutorial/ch05-indice" }
+ch06-texture      = { path = "./tutorial/ch06-texture" }
+life-game         = { path = "./tutorial/life-game" }
+hello-glyphon     = { path = "./tutorial/hello-glyphon" }
+rect-renderer     = { path = "./prototype/rect-renderer" }
+text-renderer     = { path = "./prototype/text-renderer" }
+cube_blinn_phong  = { path = "./practice/cube_blinn_phong" }
+rotate_cube_basic = { path = "./practice/rotate_cube_basic" }
 
 [workspace]
 
@@ -32,4 +33,5 @@ members = [
   "tutorial/hello-glyphon",
   "tutorial/life-game",
   "practice/cube_blinn_phong",
+  "practice/rotate_cube_basic",
 ]

@@ -96,7 +96,7 @@ struct Initial {
 
 struct State<'a> {
   /// drawing context
-  init: ws::WgpuInit<'a>,
+  init: ws::WgpuContext<'a>,
   pipelines: Vec<wgpu::RenderPipeline>,
 
   /// drawing data
@@ -132,7 +132,7 @@ impl<'a> Render for State<'a> {
     inputs: &Inputs,
     initial: &Initial,
   ) -> Self {
-    let init = ws::WgpuInit::new(window, inputs.sample_count, None).await;
+    let init = ws::WgpuContext::new(window, inputs.sample_count, None).await;
 
     let vs_shader = init
       .device

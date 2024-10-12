@@ -49,3 +49,7 @@ cargo run -- prototype/text-renderer
 ```bash
 cargo run -- practice/cube_blinn_phong 4
 ```
+
+```bash
+cargo run -- practice/rotate_cube_basic
+```
