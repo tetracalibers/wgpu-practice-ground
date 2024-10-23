@@ -47,6 +47,8 @@ pub trait Render<'a> {
   ) -> Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError>;
 }
 
+// TODO: Appと同様の型パラメータ構成にできないか検討
+// TODO: GifでもMSAAに対応できないか実験
 pub struct Gif<'a, M, S, R>
 where
   R: Render<'a, DrawData = M, InitialState = S>,
@@ -120,6 +122,7 @@ where
       mip_level_count: 1,
       sample_count: 1,
       dimension: wgpu::TextureDimension::D2,
+      // TODO: self.ctx.formatを使うように変更
       format: wgpu::TextureFormat::Rgba8UnormSrgb,
       // TextureUsages::RENDER_ATTACHMENTを使って、wgpuがテクスチャにレンダリングできるようにする
       // TextureUsages::COPY_SRCはテクスチャからデータを取り出してファイルに保存できるようにするため
@@ -390,6 +393,11 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
     }
   }
 
+  // TODO: 更新間隔を指定できるようにする
+  // - need_redrawフラグを追加
+  // - 引数にupdate_interval: Option<Duration>を追加
+  // - update_intervalがSomeの場合、set_control_flowによる待機処理を入れる
+  // 参考: tutorial/life-game/src/app.rs
   fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
     let binding = self.window();
     let window = match &binding {
