@@ -56,12 +56,12 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
     specular_color: [1., 1., 1.],
     object_color: [0.855, 0.792, 0.969],
     material: Material::default(),
-    rotation_speed: 1.,
+    rotation_speed: 2.5,
   };
 
   let mut gif: Gif<'_, Model, Initial, State> =
     Gif::new(1024, model, initial).await;
-  gif.export("export/with_gif.gif", 50, 30).await?;
+  gif.export("export/with_gif-1.gif", 50, 1).await?;
 
   Ok(())
 }
