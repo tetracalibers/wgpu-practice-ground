@@ -1,5 +1,6 @@
 pub mod binding;
 pub mod buffer;
+pub mod context;
 pub mod framework;
 pub mod model;
 pub mod transforms;

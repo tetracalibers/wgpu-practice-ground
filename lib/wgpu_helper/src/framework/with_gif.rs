@@ -10,7 +10,7 @@ use winit::{
   window::{Window, WindowId},
 };
 
-use crate::wgpu_simplified::WgpuContext;
+use crate::context::WgpuContext;
 
 pub struct DrawOutput<'a> {
   pub surface_texture: Option<wgpu::SurfaceTexture>,
@@ -28,7 +28,7 @@ pub trait Render<'a> {
   type InitialState;
 
   fn new(
-    ctx: Option<&WgpuContext<'a>>,
+    ctx: &WgpuContext<'a>,
     draw_data: &Self::DrawData,
     initial_state: &Self::InitialState,
   ) -> impl Future<Output = Self>;
@@ -53,8 +53,9 @@ where
   R: Render<'a, DrawData = M, InitialState = S>,
 {
   renderer: R,
-  device: wgpu::Device,
-  queue: wgpu::Queue,
+  // device: wgpu::Device,
+  // queue: wgpu::Queue,
+  ctx: WgpuContext<'a>,
   _phantom_data: std::marker::PhantomData<&'a ()>,
 }
 
@@ -62,37 +63,22 @@ impl<'a, M, S, R> Gif<'a, M, S, R>
 where
   R: Render<'a, DrawData = M, InitialState = S>,
 {
-  pub async fn new(draw_data: M, initial_state: S) -> Self {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-      backends: wgpu::Backends::all(),
-      ..Default::default()
-    });
+  pub async fn new(size: u32, draw_data: M, initial_state: S) -> Self {
+    let ctx = WgpuContext::new_without_surface(
+      size,
+      size,
+      wgpu::TextureFormat::Rgba8UnormSrgb,
+      1,
+    )
+    .await;
 
-    let adapter = instance
-      .request_adapter(&wgpu::RequestAdapterOptions::default())
-      .await
-      .unwrap();
-
-    let (device, queue) = adapter
-      .request_device(&wgpu::DeviceDescriptor::default(), None)
-      .await
-      .unwrap();
-
-    let renderer = R::new(None, &draw_data, &initial_state).await;
+    let renderer = R::new(&ctx, &draw_data, &initial_state).await;
 
     Self {
       renderer,
-      device,
-      queue,
+      ctx,
       _phantom_data: std::marker::PhantomData,
     }
-  }
-
-  pub fn build_renderer(
-    draw_data: M,
-    initial_state: S,
-  ) -> impl Future<Output = R> {
-    async move { R::new(None, &draw_data, &initial_state).await }
   }
 
   fn save_gif(
@@ -144,7 +130,7 @@ where
       label: None,
       view_formats: &[],
     };
-    let texture = self.device.create_texture(&texture_desc);
+    let texture = self.ctx.device.create_texture(&texture_desc);
 
     //
     // wgpuはテクスチャからバッファへのコピーがCOPY_BYTES_PER_ROW_ALIGNMENTを使用して整列されることを要求する
@@ -170,16 +156,15 @@ where
       label: Some("Output Buffer"),
       mapped_at_creation: false,
     };
-    let output_buffer = self.device.create_buffer(&buffer_desc);
+    let output_buffer = self.ctx.device.create_buffer(&buffer_desc);
 
     // フレームをレンダリングし、そのフレームをVec<u8>にコピーする
     let mut frames = Vec::new();
 
     for _ in 0..scene_count {
-      let mut command_encoder =
-        self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-          label: None,
-        });
+      let mut command_encoder = self.ctx.device.create_command_encoder(
+        &wgpu::CommandEncoderDescriptor { label: None },
+      );
 
       let copy_to_buffer = |command_encoder: &mut wgpu::CommandEncoder| {
         // テクスチャの内容をバッファにコピーする
@@ -210,7 +195,7 @@ where
         copy_to_buffer,
       )?;
 
-      submit(&self.queue);
+      submit(&self.ctx.queue);
 
       //
       // バッファからデータを取り出すには、まずバッファをマップし、バッファビューを取得して、それを&[u8]のように扱う必要がある
@@ -220,7 +205,7 @@ where
       buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
         tx.send(result).unwrap();
       });
-      self.device.poll(wgpu::Maintain::Wait);
+      self.ctx.device.poll(wgpu::Maintain::Wait);
 
       match rx.receive().await {
         Some(Ok(())) => {
@@ -296,8 +281,12 @@ impl<'a, R: Render<'a>> App<'a, R> {
     let ctx = WgpuContext::new(window, self.sample_count, None).await;
     self.ctx = Some(ctx);
 
-    let renderer =
-      R::new(self.ctx.as_ref(), &self.draw_data, &self.initial_state).await;
+    let renderer = R::new(
+      self.ctx.as_ref().unwrap(),
+      &self.draw_data,
+      &self.initial_state,
+    )
+    .await;
     self.renderer = Some(renderer);
   }
 }
@@ -366,7 +355,7 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
 
         match renderer.draw(
           command_encoder,
-          RenderTarget::Surface(&ctx.surface),
+          RenderTarget::Surface(ctx.surface.as_ref().unwrap()),
           Some(self.sample_count),
           |_command_encoder| {},
         ) {

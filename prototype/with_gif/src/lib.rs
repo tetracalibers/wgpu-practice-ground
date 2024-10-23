@@ -5,11 +5,11 @@ use std::{iter, mem, time};
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
 use wgpu::util::DeviceExt;
+use wgpu_helper::context::{self as ws, WgpuContext};
 use wgpu_helper::framework::with_gif::{App, Gif, Render, RenderTarget};
 use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
-use wgpu_helper::wgpu_simplified as ws;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 
@@ -59,8 +59,9 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
     rotation_speed: 1.,
   };
 
-  let mut gif: Gif<'_, Model, Initial, State> = Gif::new(model, initial).await;
-  gif.export("prototype/with_gif", 512, 20, 10).await?;
+  let mut gif: Gif<'_, Model, Initial, State> =
+    Gif::new(512, model, initial).await;
+  gif.export("export/with_gif.gif", 512, 20, 10).await?;
 
   Ok(())
 }
@@ -153,17 +154,10 @@ impl<'a> Render<'a> for State {
   type InitialState = Initial;
 
   async fn new(
-    ctx: Option<&ws::WgpuContext<'a>>,
+    ctx: &WgpuContext<'a>,
     model: &Model,
     initial: &Initial,
   ) -> Self {
-    let ctx = match ctx {
-      Some(ctx) => ctx,
-      None => {
-        panic!("Failed to create a wgpu context");
-      }
-    };
-
     let vs_shader = ctx
       .device
       .create_shader_module(wgpu::include_wgsl!("./shader-vert.wgsl"));
@@ -171,7 +165,7 @@ impl<'a> Render<'a> for State {
       .device
       .create_shader_module(wgpu::include_wgsl!("./shader-frag.wgsl"));
 
-    let aspect = ctx.config.width as f32 / ctx.config.height as f32;
+    let aspect = ctx.size.width as f32 / ctx.size.height as f32;
     let view_mat = wt::create_view_mat(
       initial.camera_position,
       initial.look_direction,
@@ -302,7 +296,9 @@ impl<'a> Render<'a> for State {
 
   fn resize(&mut self, ctx: &mut ws::WgpuContext<'_>, size: PhysicalSize<u32>) {
     if size.width > 0 && size.height > 0 {
-      ctx.surface.configure(&ctx.device, &ctx.config);
+      if let Some(surface) = &ctx.surface {
+        surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
+      }
 
       self.project_mat =
         wt::create_projection_mat(size.width as f32 / size.height as f32, true);
