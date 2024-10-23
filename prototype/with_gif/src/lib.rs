@@ -406,17 +406,4 @@ impl<'a> Render<'a> for State {
 
     Ok(submit)
   }
-
-  // fn submit(&self, queue: &wgpu::Queue, output: DrawOutput) {
-  //   let DrawOutput {
-  //     encoder,
-  //     surface_texture,
-  //   } = output;
-
-  //   queue.submit(iter::once(encoder.finish()));
-
-  //   if let Some(frame) = surface_texture {
-  //     frame.present();
-  //   }
-  // }
 }

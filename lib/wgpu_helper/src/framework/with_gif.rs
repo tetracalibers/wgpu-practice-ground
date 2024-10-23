@@ -45,7 +45,6 @@ pub trait Render<'a> {
     sample_count: Option<u32>,
     before_submit_hook: impl FnOnce(&mut wgpu::CommandEncoder) -> (),
   ) -> Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError>;
-  // fn submit(&self, queue: &wgpu::Queue, output: DrawOutput);
 }
 
 pub struct Gif<'a, M, S, R>
