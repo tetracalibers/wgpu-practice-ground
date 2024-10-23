@@ -40,11 +40,12 @@ pub trait Render<'a> {
   fn update(&mut self, ctx: &WgpuContext, dt: time::Duration);
   fn draw(
     &mut self,
-    encoder: &wgpu::CommandEncoder,
+    encoder: wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: Option<u32>,
+    before_submit_hook: impl FnOnce(&mut wgpu::CommandEncoder) -> (),
   ) -> Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError>;
-  fn submit(&self, queue: &wgpu::Queue, output: DrawOutput);
+  // fn submit(&self, queue: &wgpu::Queue, output: DrawOutput);
 }
 
 pub struct Gif<'a, M, S, R>
@@ -180,31 +181,34 @@ where
           label: None,
         });
 
+      let copy_to_buffer = |command_encoder: &mut wgpu::CommandEncoder| {
+        // テクスチャの内容をバッファにコピーする
+        command_encoder.copy_texture_to_buffer(
+          wgpu::ImageCopyTexture {
+            texture: &texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+          },
+          wgpu::ImageCopyBuffer {
+            buffer: &output_buffer,
+            layout: wgpu::ImageDataLayout {
+              offset: 0,
+              bytes_per_row: Some(padded_bytes_per_row),
+              rows_per_image: Some(out_size),
+            },
+          },
+          texture_desc.size,
+        );
+      };
+
       // テクスチャに描画する
       let submit = self.renderer.draw(
-        &command_encoder,
+        command_encoder,
         RenderTarget::Texture(&texture),
         None,
+        copy_to_buffer,
       )?;
-
-      // テクスチャの内容をバッファにコピーする
-      command_encoder.copy_texture_to_buffer(
-        wgpu::ImageCopyTexture {
-          texture: &texture,
-          mip_level: 0,
-          origin: wgpu::Origin3d::ZERO,
-          aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::ImageCopyBuffer {
-          buffer: &output_buffer,
-          layout: wgpu::ImageDataLayout {
-            offset: 0,
-            bytes_per_row: Some(padded_bytes_per_row),
-            rows_per_image: Some(out_size),
-          },
-        },
-        texture_desc.size,
-      );
 
       submit(&self.queue);
 
@@ -355,17 +359,23 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
         let dt = now - self.render_start_time.unwrap_or(now);
         renderer.update(ctx, dt);
 
+        let command_encoder =
+          ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: None,
+          });
+
         match renderer.draw(
-          &ctx.device,
+          command_encoder,
           RenderTarget::Surface(&ctx.surface),
           Some(self.sample_count),
+          |_command_encoder| {},
         ) {
-          Ok((submit, _)) => {
+          Ok(submit) => {
             submit(&ctx.queue);
           }
-          // Err(wgpu::SurfaceError::Lost) => {
-          //   renderer.resize(ctx, renderer.get_size(&ctx))
-          // }
+          //Err(wgpu::SurfaceError::Lost) => {
+          //  renderer.resize(ctx, renderer.get_size(&ctx))
+          //}
           Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
           Err(e) => eprintln!("{:?}", e),
         }

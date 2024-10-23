@@ -5,13 +5,11 @@ use std::{iter, mem, time};
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
 use wgpu::util::DeviceExt;
-use wgpu_helper::framework::with_gif::{
-  App, DrawOutput, Gif, Render, RenderTarget,
-};
+use wgpu_helper::framework::with_gif::{App, Gif, Render, RenderTarget};
 use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
-use wgpu_helper::wgpu_simplified::{self as ws, WgpuContext};
+use wgpu_helper::wgpu_simplified as ws;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 
@@ -352,16 +350,11 @@ impl<'a> Render<'a> for State {
 
   fn draw(
     &mut self,
-    device: &wgpu::Device,
+    mut encoder: wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: Option<u32>,
-  ) -> anyhow::Result<
-    (impl FnOnce(&wgpu::Queue) -> (), &mut wgpu::CommandEncoder),
-    wgpu::SurfaceError,
-  > {
-    let mut encoder = device
-      .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
+    before_submit_hook: impl FnOnce(&mut wgpu::CommandEncoder) -> (),
+  ) -> anyhow::Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError> {
     let (view, frame) = match target {
       RenderTarget::Surface(surface) => {
         let frame = surface.get_current_texture()?;
@@ -405,6 +398,8 @@ impl<'a> Render<'a> for State {
 
     drop(render_pass);
 
+    before_submit_hook(&mut encoder);
+
     let submit = |queue: &wgpu::Queue| {
       queue.submit(iter::once(encoder.finish()));
 
@@ -413,19 +408,19 @@ impl<'a> Render<'a> for State {
       }
     };
 
-    Ok((submit, &mut encoder))
+    Ok(submit)
   }
 
-  fn submit(&self, queue: &wgpu::Queue, output: DrawOutput) {
-    let DrawOutput {
-      encoder,
-      surface_texture,
-    } = output;
+  // fn submit(&self, queue: &wgpu::Queue, output: DrawOutput) {
+  //   let DrawOutput {
+  //     encoder,
+  //     surface_texture,
+  //   } = output;
 
-    queue.submit(iter::once(encoder.finish()));
+  //   queue.submit(iter::once(encoder.finish()));
 
-    if let Some(frame) = surface_texture {
-      frame.present();
-    }
-  }
+  //   if let Some(frame) = surface_texture {
+  //     frame.present();
+  //   }
+  // }
 }

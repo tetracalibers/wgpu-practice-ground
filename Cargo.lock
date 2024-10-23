@@ -3421,6 +3421,7 @@ dependencies = [
  "cube_blinn_phong",
  "hello-glyphon",
  "life-game",
+ "pollster",
  "rect-renderer",
  "rotate_cube_basic",
  "text-renderer",

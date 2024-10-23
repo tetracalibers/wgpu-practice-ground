@@ -17,6 +17,7 @@ text-renderer     = { path = "./prototype/text-renderer" }
 with_gif          = { path = "./prototype/with_gif" }
 cube_blinn_phong  = { path = "./practice/cube_blinn_phong" }
 rotate_cube_basic = { path = "./practice/rotate_cube_basic" }
+pollster          = "0.3.0"
 
 [workspace]
 
