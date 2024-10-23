@@ -368,6 +368,7 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
           Ok(submit) => {
             submit(&ctx.queue);
           }
+          // TODO: wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdatedの場合はresizeする
           //Err(wgpu::SurfaceError::Lost) => {
           //  renderer.resize(ctx, renderer.get_size(&ctx))
           //}
