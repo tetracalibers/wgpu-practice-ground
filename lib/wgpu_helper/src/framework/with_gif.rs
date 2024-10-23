@@ -109,10 +109,6 @@ where
     scene_count: usize,
     speed: i32,
   ) -> Result<()> {
-    //
-    // レンダリング先のテクスチャ
-    // surface.get_current_texture()を使って描画するテクスチャを取得する代わりに、テクスチャを自分で作成する
-    //
     let texture_desc = wgpu::TextureDescriptor {
       size: wgpu::Extent3d {
         width: self.size,
@@ -133,33 +129,21 @@ where
     };
     let texture = self.ctx.device.create_texture(&texture_desc);
 
-    //
-    // wgpuはテクスチャからバッファへのコピーがCOPY_BYTES_PER_ROW_ALIGNMENTを使用して整列されることを要求する
-    // このため、padded_bytes_per_rowとunpadded_bytes_per_rowの両方を保存する必要がある
-    //
     let pixel_size = mem::size_of::<[u8; 4]>() as u32;
     let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
     let unpadded_bytes_per_row = pixel_size * self.size;
     let padding = (align - unpadded_bytes_per_row % align) % align;
     let padded_bytes_per_row = unpadded_bytes_per_row + padding;
 
-    //
-    // 出力をコピーするバッファを作成する
-    //
-    // 最終的に、テクスチャからバッファにデータをコピーしてファイルに保存する
-    // データを保存するためには、十分な大きさのバッファが必要
-    //
     let buffer_size = (padded_bytes_per_row * self.size) as wgpu::BufferAddress;
     let buffer_desc = wgpu::BufferDescriptor {
       size: buffer_size,
-      // BufferUsages::MAP_READは、wpguにこのバッファをCPUから読み込みたいことを伝える
       usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
       label: Some("Output Buffer"),
       mapped_at_creation: false,
     };
     let output_buffer = self.ctx.device.create_buffer(&buffer_desc);
 
-    // フレームをレンダリングし、そのフレームをVec<u8>にコピーする
     let mut frames = Vec::new();
     let render_start_time = time::Instant::now();
 
@@ -169,7 +153,6 @@ where
       );
 
       let copy_to_buffer = |command_encoder: &mut wgpu::CommandEncoder| {
-        // テクスチャの内容をバッファにコピーする
         command_encoder.copy_texture_to_buffer(
           wgpu::ImageCopyTexture {
             texture: &texture,
@@ -193,7 +176,6 @@ where
       let dt = now - render_start_time;
       self.renderer.update(&self.ctx, dt);
 
-      // テクスチャに描画する
       let submit = self.renderer.draw(
         command_encoder,
         RenderTarget::Texture(&texture),
@@ -203,9 +185,6 @@ where
 
       submit(&self.ctx.queue);
 
-      //
-      // バッファからデータを取り出すには、まずバッファをマップし、バッファビューを取得して、それを&[u8]のように扱う必要がある
-      //
       let buffer_slice = output_buffer.slice(..);
       let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
       buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
