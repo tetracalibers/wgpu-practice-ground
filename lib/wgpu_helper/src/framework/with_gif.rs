@@ -158,6 +158,7 @@ where
 
     // フレームをレンダリングし、そのフレームをVec<u8>にコピーする
     let mut frames = Vec::new();
+    let render_start_time = time::Instant::now();
 
     for _ in 0..scene_count {
       let mut command_encoder = self.ctx.device.create_command_encoder(
@@ -184,6 +185,10 @@ where
           texture_desc.size,
         );
       };
+
+      let now = time::Instant::now();
+      let dt = now - render_start_time;
+      self.renderer.update(&self.ctx, dt);
 
       // テクスチャに描画する
       let submit = self.renderer.draw(
