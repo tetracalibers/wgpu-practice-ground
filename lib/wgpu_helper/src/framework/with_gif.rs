@@ -53,8 +53,7 @@ where
   R: Render<'a, DrawData = M, InitialState = S>,
 {
   renderer: R,
-  // device: wgpu::Device,
-  // queue: wgpu::Queue,
+  size: u32,
   ctx: WgpuContext<'a>,
   _phantom_data: std::marker::PhantomData<&'a ()>,
 }
@@ -76,6 +75,7 @@ where
 
     Self {
       renderer,
+      size,
       ctx,
       _phantom_data: std::marker::PhantomData,
     }
@@ -105,7 +105,6 @@ where
   pub async fn export(
     &mut self,
     file_path: &str,
-    out_size: u32,
     scene_count: usize,
     speed: i32,
   ) -> Result<()> {
@@ -115,8 +114,8 @@ where
     //
     let texture_desc = wgpu::TextureDescriptor {
       size: wgpu::Extent3d {
-        width: out_size,
-        height: out_size,
+        width: self.size,
+        height: self.size,
         depth_or_array_layers: 1,
       },
       mip_level_count: 1,
@@ -138,7 +137,7 @@ where
     //
     let pixel_size = mem::size_of::<[u8; 4]>() as u32;
     let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let unpadded_bytes_per_row = pixel_size * out_size;
+    let unpadded_bytes_per_row = pixel_size * self.size;
     let padding = (align - unpadded_bytes_per_row % align) % align;
     let padded_bytes_per_row = unpadded_bytes_per_row + padding;
 
@@ -148,7 +147,7 @@ where
     // 最終的に、テクスチャからバッファにデータをコピーしてファイルに保存する
     // データを保存するためには、十分な大きさのバッファが必要
     //
-    let buffer_size = (padded_bytes_per_row * out_size) as wgpu::BufferAddress;
+    let buffer_size = (padded_bytes_per_row * self.size) as wgpu::BufferAddress;
     let buffer_desc = wgpu::BufferDescriptor {
       size: buffer_size,
       // BufferUsages::MAP_READは、wpguにこのバッファをCPUから読み込みたいことを伝える
@@ -180,7 +179,7 @@ where
             layout: wgpu::ImageDataLayout {
               offset: 0,
               bytes_per_row: Some(padded_bytes_per_row),
-              rows_per_image: Some(out_size),
+              rows_per_image: Some(self.size),
             },
           },
           texture_desc.size,
@@ -224,7 +223,7 @@ where
       }
     }
 
-    self.save_gif(file_path, &mut frames, speed, out_size as u16)?;
+    self.save_gif(file_path, &mut frames, speed, self.size as u16)?;
 
     Ok(())
   }
