@@ -14,6 +14,7 @@ life-game         = { path = "./tutorial/life-game" }
 hello-glyphon     = { path = "./tutorial/hello-glyphon" }
 rect-renderer     = { path = "./prototype/rect-renderer" }
 text-renderer     = { path = "./prototype/text-renderer" }
+with_gif          = { path = "./prototype/with_gif" }
 cube_blinn_phong  = { path = "./practice/cube_blinn_phong" }
 rotate_cube_basic = { path = "./practice/rotate_cube_basic" }
 
@@ -24,6 +25,7 @@ members = [
   "lib/wgpu_helper",
   "prototype/rect-renderer",
   "prototype/text-renderer",
+  "prototype/with_gif",
   "tutorial/ch01-window",
   "tutorial/ch02-surface",
   "tutorial/ch03-pipeline",

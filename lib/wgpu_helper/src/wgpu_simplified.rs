@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use winit::window::Window;
 
+#[derive(Debug)]
 pub struct WgpuContext<'a> {
   pub instance: wgpu::Instance,
   pub surface: wgpu::Surface<'a>,

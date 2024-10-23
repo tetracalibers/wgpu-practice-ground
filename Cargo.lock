@@ -329,9 +329,9 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 
 [[package]]
 name = "bytemuck"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94bbb0ad554ad961ddc5da507a12a29b14e4ae5bda06b19f575a3e6079d2e2ae"
+checksum = "8334215b81e418a0a7bdb8ef0849474f40bb10c8b71f1c4ed315cff49f32494d"
 dependencies = [
  "bytemuck_derive",
 ]
@@ -3424,6 +3424,7 @@ dependencies = [
  "rect-renderer",
  "rotate_cube_basic",
  "text-renderer",
+ "with_gif",
 ]
 
 [[package]]
@@ -3455,6 +3456,8 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "cgmath",
+ "futures-intrusive",
+ "gif",
  "pollster",
  "serde",
  "serde_json",
@@ -3791,6 +3794,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b480ae9340fc261e6be3e95a1ba86d54ae3f9171132a73ce8d4bbaf68339507c"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "with_gif"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cgmath",
+ "enum-rotate",
+ "env_logger",
+ "pollster",
+ "rand",
+ "wgpu 22.1.0",
+ "wgpu_helper",
+ "winit",
 ]
 
 [[package]]
