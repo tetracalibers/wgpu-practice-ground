@@ -161,7 +161,7 @@ where
     let render_start_time = time::Instant::now();
 
     for _ in 0..scene_count {
-      let mut command_encoder = self.ctx.device.create_command_encoder(
+      let command_encoder = self.ctx.device.create_command_encoder(
         &wgpu::CommandEncoderDescriptor { label: None },
       );
 
