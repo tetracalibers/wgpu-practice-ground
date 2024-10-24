@@ -33,7 +33,7 @@ pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
     rotation_speed: 1.,
   };
 
-  let mut app: App<State> = App::new(title, model, initial, Some(1));
+  let mut app: App<State> = App::new(title, model, initial, Some(4));
   app.run()?;
 
   Ok(())
@@ -59,8 +59,8 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
     rotation_speed: 2.5,
   };
 
-  let mut gif = Gif::<State>::new(1024, model, initial).await;
-  gif.export("export/with_gif-1.gif", 50, 1).await?;
+  let mut gif = Gif::<State>::new(1024, model, initial, Some(4)).await;
+  gif.export("export/with_gif-msaa.gif", 50, 1).await?;
 
   Ok(())
 }
@@ -342,7 +342,7 @@ impl<'a> Render<'a> for State {
     &mut self,
     mut encoder: wgpu::CommandEncoder,
     target: RenderTarget,
-    sample_count: Option<u32>,
+    sample_count: u32,
     before_submit_hook: impl FnOnce(&mut wgpu::CommandEncoder) -> (),
   ) -> anyhow::Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError> {
     let (view, frame) = match target {
@@ -361,7 +361,7 @@ impl<'a> Render<'a> for State {
     let color_attach = ws::create_color_attachment(&view);
     let msaa_attach =
       ws::create_msaa_color_attachment(&view, &self.msaa_texture_view);
-    let color_attachment = if sample_count.unwrap_or(1) == 1 {
+    let color_attachment = if sample_count == 1 {
       color_attach
     } else {
       msaa_attach

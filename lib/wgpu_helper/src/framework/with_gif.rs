@@ -42,18 +42,18 @@ pub trait Render<'a> {
     &mut self,
     encoder: wgpu::CommandEncoder,
     target: RenderTarget,
-    sample_count: Option<u32>,
+    sample_count: u32,
     before_submit_hook: impl FnOnce(&mut wgpu::CommandEncoder) -> (),
   ) -> Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError>;
 }
 
-// TODO: GifでもMSAAに対応できないか実験
 pub struct Gif<'a, R>
 where
   R: Render<'a>,
 {
   renderer: R,
   size: u32,
+  sample_count: u32,
   ctx: WgpuContext<'a>,
 }
 
@@ -65,12 +65,15 @@ where
     size: u32,
     draw_data: R::DrawData,
     initial_state: R::InitialState,
+    sample_count: Option<u32>,
   ) -> Self {
+    let sample_count = sample_count.unwrap_or(1);
+
     let ctx = WgpuContext::new_without_surface(
       size,
       size,
       wgpu::TextureFormat::Rgba8UnormSrgb,
-      1,
+      sample_count,
     )
     .await;
 
@@ -79,6 +82,7 @@ where
     Self {
       renderer,
       size,
+      sample_count,
       ctx,
     }
   }
@@ -117,7 +121,7 @@ where
         depth_or_array_layers: 1,
       },
       mip_level_count: 1,
-      sample_count: 1,
+      sample_count: 1, // コピー先のテクスチャでは 1 でよい
       dimension: wgpu::TextureDimension::D2,
       format: self.ctx.format,
       usage: wgpu::TextureUsages::COPY_SRC
@@ -177,7 +181,7 @@ where
       let submit = self.renderer.draw(
         command_encoder,
         RenderTarget::Texture(&texture),
-        None,
+        self.sample_count,
         copy_to_buffer,
       )?;
 
@@ -339,7 +343,7 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
         match renderer.draw(
           command_encoder,
           RenderTarget::Surface(ctx.surface.as_ref().unwrap()),
-          Some(self.sample_count),
+          self.sample_count,
           |_command_encoder| {},
         ) {
           Ok(submit) => {
