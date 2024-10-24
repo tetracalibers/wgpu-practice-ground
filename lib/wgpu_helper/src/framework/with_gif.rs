@@ -56,7 +56,6 @@ where
   renderer: R,
   size: u32,
   ctx: WgpuContext<'a>,
-  _phantom_data: std::marker::PhantomData<&'a ()>,
 }
 
 impl<'a, M, S, R> Gif<'a, M, S, R>
@@ -78,7 +77,6 @@ where
       renderer,
       size,
       ctx,
-      _phantom_data: std::marker::PhantomData,
     }
   }
 
