@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::f32::consts::PI;
-use std::{iter, mem, time};
+use std::{mem, time};
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
@@ -60,7 +60,7 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
   };
 
   let mut gif = Gif::<State>::new(1024, model, initial, Some(4)).await;
-  gif.export("export/with_gif-msaa.gif", 50, 1).await?;
+  gif.export("export/with_gif-msaa-1.gif", 50, 1).await?;
 
   Ok(())
 }
@@ -288,7 +288,13 @@ impl<'a> Render<'a> for State {
     }
   }
 
-  fn resize(&mut self, ctx: &mut ws::WgpuContext<'_>, size: PhysicalSize<u32>) {
+  fn resize(
+    &mut self,
+    ctx: &ws::WgpuContext<'_>,
+    size: Option<PhysicalSize<u32>>,
+  ) {
+    let size = size.unwrap_or(ctx.size);
+
     if size.width > 0 && size.height > 0 {
       if let Some(surface) = &ctx.surface {
         surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
@@ -339,12 +345,11 @@ impl<'a> Render<'a> for State {
   }
 
   fn draw(
-    &mut self,
-    mut encoder: wgpu::CommandEncoder,
+    &self,
+    encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: u32,
-    before_submit_hook: impl FnOnce(&mut wgpu::CommandEncoder) -> (),
-  ) -> anyhow::Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError> {
+  ) -> anyhow::Result<Option<wgpu::SurfaceTexture>, wgpu::SurfaceError> {
     let (view, frame) = match target {
       RenderTarget::Surface(surface) => {
         let frame = surface.get_current_texture()?;
@@ -388,16 +393,6 @@ impl<'a> Render<'a> for State {
 
     drop(render_pass);
 
-    before_submit_hook(&mut encoder);
-
-    let submit = |queue: &wgpu::Queue| {
-      queue.submit(iter::once(encoder.finish()));
-
-      if let Some(frame) = frame {
-        frame.present();
-      }
-    };
-
-    Ok(submit)
+    Ok(frame)
   }
 }

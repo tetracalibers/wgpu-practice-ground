@@ -1,4 +1,4 @@
-use std::{future::Future, mem, sync::Arc, time};
+use std::{future::Future, iter, mem, sync::Arc, time};
 
 use anyhow::Result;
 use winit::{
@@ -35,16 +35,27 @@ pub trait Render<'a> {
   fn get_size(&self, ctx: &WgpuContext) -> PhysicalSize<u32> {
     ctx.size
   }
-  fn resize(&mut self, ctx: &mut WgpuContext, size: PhysicalSize<u32>);
+  fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>);
   fn process_event(&mut self, event: &WindowEvent) -> bool;
   fn update(&mut self, ctx: &WgpuContext, dt: time::Duration);
   fn draw(
-    &mut self,
-    encoder: wgpu::CommandEncoder,
+    &self,
+    encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: u32,
-    before_submit_hook: impl FnOnce(&mut wgpu::CommandEncoder) -> (),
-  ) -> Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError>;
+  ) -> Result<Option<wgpu::SurfaceTexture>, wgpu::SurfaceError>;
+  fn submit(
+    &self,
+    queue: &wgpu::Queue,
+    encoder: wgpu::CommandEncoder,
+    frame: Option<wgpu::SurfaceTexture>,
+  ) {
+    queue.submit(iter::once(encoder.finish()));
+
+    if let Some(frame) = frame {
+      frame.present();
+    }
+  }
 }
 
 pub struct Gif<'a, R>
@@ -150,42 +161,39 @@ where
     let render_start_time = time::Instant::now();
 
     for _ in 0..scene_count {
-      let command_encoder = self.ctx.device.create_command_encoder(
+      let mut command_encoder = self.ctx.device.create_command_encoder(
         &wgpu::CommandEncoderDescriptor { label: None },
       );
-
-      let copy_to_buffer = |command_encoder: &mut wgpu::CommandEncoder| {
-        command_encoder.copy_texture_to_buffer(
-          wgpu::ImageCopyTexture {
-            texture: &texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-          },
-          wgpu::ImageCopyBuffer {
-            buffer: &output_buffer,
-            layout: wgpu::ImageDataLayout {
-              offset: 0,
-              bytes_per_row: Some(padded_bytes_per_row),
-              rows_per_image: Some(self.size),
-            },
-          },
-          texture_desc.size,
-        );
-      };
 
       let now = time::Instant::now();
       let dt = now - render_start_time;
       self.renderer.update(&self.ctx, dt);
 
-      let submit = self.renderer.draw(
-        command_encoder,
+      self.renderer.draw(
+        &mut command_encoder,
         RenderTarget::Texture(&texture),
         self.sample_count,
-        copy_to_buffer,
       )?;
 
-      submit(&self.ctx.queue);
+      command_encoder.copy_texture_to_buffer(
+        wgpu::ImageCopyTexture {
+          texture: &texture,
+          mip_level: 0,
+          origin: wgpu::Origin3d::ZERO,
+          aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::ImageCopyBuffer {
+          buffer: &output_buffer,
+          layout: wgpu::ImageDataLayout {
+            offset: 0,
+            bytes_per_row: Some(padded_bytes_per_row),
+            rows_per_image: Some(self.size),
+          },
+        },
+        texture_desc.size,
+      );
+
+      self.renderer.submit(&self.ctx.queue, command_encoder, None);
 
       let buffer_slice = output_buffer.slice(..);
       let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
@@ -313,14 +321,14 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
       return;
     }
 
-    let ctx = match &mut self.ctx {
+    let ctx = match &self.ctx {
       Some(ctx) => ctx,
       None => return,
     };
 
     match event {
       WindowEvent::Resized(size) => {
-        renderer.resize(ctx, size);
+        renderer.resize(ctx, Some(size));
       }
       WindowEvent::RedrawRequested => {
         let ctx = match &mut self.ctx {
@@ -335,24 +343,22 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
         let dt = now - self.render_start_time.unwrap_or(now);
         renderer.update(ctx, dt);
 
-        let command_encoder =
+        let mut command_encoder =
           ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: None,
           });
 
-        match renderer.draw(
-          command_encoder,
+        let result = renderer.draw(
+          &mut command_encoder,
           RenderTarget::Surface(ctx.surface.as_ref().unwrap()),
           self.sample_count,
-          |_command_encoder| {},
-        ) {
-          Ok(submit) => {
-            submit(&ctx.queue);
+        );
+
+        match result {
+          Ok(frame) => renderer.submit(&ctx.queue, command_encoder, frame),
+          Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+            renderer.resize(ctx, None)
           }
-          // TODO: wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdatedの場合はresizeする
-          //Err(wgpu::SurfaceError::Lost) => {
-          //  renderer.resize(ctx, renderer.get_size(&ctx))
-          //}
           Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
           Err(e) => eprintln!("{:?}", e),
         }
