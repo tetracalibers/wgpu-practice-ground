@@ -47,22 +47,25 @@ pub trait Render<'a> {
   ) -> Result<impl FnOnce(&wgpu::Queue) -> (), wgpu::SurfaceError>;
 }
 
-// TODO: Appと同様の型パラメータ構成にできないか検討
 // TODO: GifでもMSAAに対応できないか実験
-pub struct Gif<'a, M, S, R>
+pub struct Gif<'a, R>
 where
-  R: Render<'a, DrawData = M, InitialState = S>,
+  R: Render<'a>,
 {
   renderer: R,
   size: u32,
   ctx: WgpuContext<'a>,
 }
 
-impl<'a, M, S, R> Gif<'a, M, S, R>
+impl<'a, R> Gif<'a, R>
 where
-  R: Render<'a, DrawData = M, InitialState = S>,
+  R: Render<'a>,
 {
-  pub async fn new(size: u32, draw_data: M, initial_state: S) -> Self {
+  pub async fn new(
+    size: u32,
+    draw_data: R::DrawData,
+    initial_state: R::InitialState,
+  ) -> Self {
     let ctx = WgpuContext::new_without_surface(
       size,
       size,

@@ -59,8 +59,7 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
     rotation_speed: 2.5,
   };
 
-  let mut gif: Gif<'_, Model, Initial, State> =
-    Gif::new(1024, model, initial).await;
+  let mut gif = Gif::<State>::new(1024, model, initial).await;
   gif.export("export/with_gif-1.gif", 50, 1).await?;
 
   Ok(())
