@@ -53,3 +53,11 @@ cargo run -- practice/cube_blinn_phong 4
 ```bash
 cargo run -- practice/rotate_cube_basic
 ```
+
+```bash
+cargo run -- prototype/with_gif
+```
+
+```bash
+cargo run -- export/with_gif
+```

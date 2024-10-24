@@ -1,16 +1,17 @@
 use std::sync::Arc;
 
-use winit::window::Window;
+use winit::{dpi::PhysicalSize, window::Window};
 
 #[derive(Debug)]
 pub struct WgpuContext<'a> {
   pub instance: wgpu::Instance,
-  pub surface: wgpu::Surface<'a>,
   pub adapter: wgpu::Adapter,
   pub device: wgpu::Device,
   pub queue: wgpu::Queue,
-  pub config: wgpu::SurfaceConfiguration,
+  pub surface: Option<wgpu::Surface<'a>>,
+  pub config: Option<wgpu::SurfaceConfiguration>,
   pub size: winit::dpi::PhysicalSize<u32>,
+  pub format: wgpu::TextureFormat,
   pub sample_count: u32,
 }
 
@@ -66,12 +67,46 @@ impl<'a> WgpuContext<'a> {
 
     Self {
       instance,
-      surface,
+      surface: Some(surface),
       adapter,
       device,
       queue,
-      config,
+      config: Some(config),
+      format,
       size,
+      sample_count,
+    }
+  }
+
+  pub async fn new_without_surface(
+    width: u32,
+    height: u32,
+    format: wgpu::TextureFormat,
+    sample_count: u32,
+  ) -> Self {
+    let size = PhysicalSize::new(width, height);
+
+    let instance = wgpu::Instance::default();
+
+    let adapter = instance
+      .request_adapter(&wgpu::RequestAdapterOptions::default())
+      .await
+      .unwrap();
+
+    let (device, queue) = adapter
+      .request_device(&wgpu::DeviceDescriptor::default(), None)
+      .await
+      .unwrap();
+
+    Self {
+      instance,
+      surface: None,
+      adapter,
+      device,
+      queue,
+      config: None,
+      size,
+      format,
       sample_count,
     }
   }
@@ -140,7 +175,7 @@ impl RenderSet<'_> {
       fragment: Some(wgpu::FragmentState {
         module: &self.fs_shader.unwrap(),
         entry_point: &self.fs_entry,
-        targets: &[Some(init.config.format.into())],
+        targets: &[Some(init.format.into())],
         compilation_options: wgpu::PipelineCompilationOptions::default(),
       }),
       primitive: wgpu::PrimitiveState {
@@ -225,14 +260,14 @@ pub fn create_msaa_texture_view(init: &WgpuContext) -> wgpu::TextureView {
   let msaa_texture = init.device.create_texture(&wgpu::TextureDescriptor {
     label: None,
     size: wgpu::Extent3d {
-      width: init.config.width,
-      height: init.config.height,
+      width: init.size.width,
+      height: init.size.height,
       depth_or_array_layers: 1,
     },
     mip_level_count: 1,
     sample_count: init.sample_count,
     dimension: wgpu::TextureDimension::D2,
-    format: init.config.format,
+    format: init.format,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
     view_formats: &[],
   });
@@ -258,8 +293,8 @@ pub fn create_depth_view(init: &WgpuContext) -> wgpu::TextureView {
   let depth_texture = init.device.create_texture(&wgpu::TextureDescriptor {
     label: None,
     size: wgpu::Extent3d {
-      width: init.config.width,
-      height: init.config.height,
+      width: init.size.width,
+      height: init.size.height,
       depth_or_array_layers: 1,
     },
     mip_level_count: 1,

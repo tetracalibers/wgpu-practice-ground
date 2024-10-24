@@ -25,6 +25,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     "tutorial/hello-glyphon" => hello_glyphon::run(),
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
+    "prototype/with_gif" => Ok(with_gif::run("with_gif")?),
+    "export/with_gif" => Ok(pollster::block_on(with_gif::export_gif())?),
     "practice/cube_blinn_phong" => {
       Ok(cube_blinn_phong::run("cube_blinn_phong")?)
     }
