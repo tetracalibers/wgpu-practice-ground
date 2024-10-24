@@ -32,9 +32,6 @@ pub trait Render<'a> {
     draw_data: &Self::DrawData,
     initial_state: &Self::InitialState,
   ) -> impl Future<Output = Self>;
-  fn get_size(&self, ctx: &WgpuContext) -> PhysicalSize<u32> {
-    ctx.size
-  }
   fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>);
   fn process_event(&mut self, event: &WindowEvent) -> bool;
   fn update(&mut self, ctx: &WgpuContext, dt: time::Duration);
