@@ -121,8 +121,6 @@ where
       dimension: wgpu::TextureDimension::D2,
       // TODO: self.ctx.formatを使うように変更
       format: wgpu::TextureFormat::Rgba8UnormSrgb,
-      // TextureUsages::RENDER_ATTACHMENTを使って、wgpuがテクスチャにレンダリングできるようにする
-      // TextureUsages::COPY_SRCはテクスチャからデータを取り出してファイルに保存できるようにするため
       usage: wgpu::TextureUsages::COPY_SRC
         | wgpu::TextureUsages::RENDER_ATTACHMENT,
       label: None,
