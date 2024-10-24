@@ -22,7 +22,7 @@ pub enum RenderTarget<'a> {
   Texture(&'a wgpu::Texture),
 }
 
-#[allow(opaque_hidden_inferred_bound)]
+#[allow(opaque_hidden_inferred_bound, unused_variables)]
 pub trait Render<'a> {
   type DrawData;
   type InitialState;
