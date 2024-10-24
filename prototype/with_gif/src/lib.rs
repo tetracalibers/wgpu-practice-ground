@@ -215,12 +215,7 @@ impl<'a> Render<'a> for State {
     let material_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Material Uniform Buffer"),
-        contents: bytemuck::cast_slice(&[
-          initial.material.ambient_intensity,
-          initial.material.diffuse_intensity,
-          initial.material.specular_intensity,
-          initial.material.specular_shininess,
-        ]),
+        contents: bytemuck::cast_slice(&[initial.material]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
