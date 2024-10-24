@@ -119,8 +119,7 @@ where
       mip_level_count: 1,
       sample_count: 1,
       dimension: wgpu::TextureDimension::D2,
-      // TODO: self.ctx.formatを使うように変更
-      format: wgpu::TextureFormat::Rgba8UnormSrgb,
+      format: self.ctx.format,
       usage: wgpu::TextureUsages::COPY_SRC
         | wgpu::TextureUsages::RENDER_ATTACHMENT,
       label: None,
