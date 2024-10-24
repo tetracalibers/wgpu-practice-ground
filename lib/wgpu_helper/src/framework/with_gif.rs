@@ -46,7 +46,7 @@ pub trait Render<'a> {
   }
   fn update(&mut self, ctx: &WgpuContext, dt: time::Duration) {}
   fn draw(
-    &self,
+    &mut self,
     encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: u32,

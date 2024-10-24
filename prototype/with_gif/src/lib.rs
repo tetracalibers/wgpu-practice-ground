@@ -340,7 +340,7 @@ impl<'a> Render<'a> for State {
   }
 
   fn draw(
-    &self,
+    &mut self,
     encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: u32,
