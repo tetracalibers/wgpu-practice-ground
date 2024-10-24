@@ -32,9 +32,19 @@ pub trait Render<'a> {
     draw_data: &Self::DrawData,
     initial_state: &Self::InitialState,
   ) -> impl Future<Output = Self>;
-  fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>);
-  fn process_event(&mut self, event: &WindowEvent) -> bool;
-  fn update(&mut self, ctx: &WgpuContext, dt: time::Duration);
+  fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>) {
+    let size = size.unwrap_or(ctx.size);
+
+    if size.width > 0 && size.height > 0 {
+      if let Some(surface) = &ctx.surface {
+        surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
+      }
+    }
+  }
+  fn process_event(&mut self, event: &WindowEvent) -> bool {
+    false
+  }
+  fn update(&mut self, ctx: &WgpuContext, dt: time::Duration) {}
   fn draw(
     &self,
     encoder: &mut wgpu::CommandEncoder,

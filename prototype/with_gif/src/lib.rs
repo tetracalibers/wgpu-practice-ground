@@ -11,7 +11,6 @@ use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
 use winit::dpi::PhysicalSize;
-use winit::event::WindowEvent;
 
 pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
   env_logger::init();
@@ -309,10 +308,6 @@ impl<'a> Render<'a> for State {
         self.msaa_texture_view = ws::create_msaa_texture_view(&ctx);
       }
     }
-  }
-
-  fn process_event(&mut self, _event: &WindowEvent) -> bool {
-    false
   }
 
   fn update(&mut self, ctx: &ws::WgpuContext, dt: time::Duration) {
