@@ -1,5 +1,5 @@
 [package]
-name    = "life_game"
+name    = "with_gif_life_game"
 version = "0.1.0"
 edition = "2021"
 
