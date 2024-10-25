@@ -17,22 +17,22 @@ pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
 
   let (vertex_data, index_data) = create_vertices();
 
-  let model = Model {
+  let initial = Initial {
     vertex_data,
     index_data,
-  };
 
-  let initial = Initial {
     camera_position: Point3::new(3., 1.5, 3.),
     look_direction: Point3::new(0., 0., 0.),
     up_direction: Vector3::unit_y(),
+
     specular_color: [1., 1., 1.],
     object_color: [0.855, 0.792, 0.969],
     material: Material::default(),
+
     rotation_speed: 1.,
   };
 
-  let mut app: App<State> = App::new(title, model, initial).with_msaa();
+  let mut app: App<State> = App::new(title, initial).with_msaa();
   app.run()?;
 
   Ok(())
@@ -43,30 +43,25 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
 
   let (vertex_data, index_data) = create_vertices();
 
-  let model = Model {
+  let initial = Initial {
     vertex_data,
     index_data,
-  };
 
-  let initial = Initial {
     camera_position: Point3::new(3., 1.5, 3.),
     look_direction: Point3::new(0., 0., 0.),
     up_direction: Vector3::unit_y(),
+
     specular_color: [1., 1., 1.],
     object_color: [0.855, 0.792, 0.969],
     material: Material::default(),
+
     rotation_speed: 2.5,
   };
 
-  let mut gif = Gif::<State>::new(1024, model, initial, Some(4)).await;
-  gif.export("export/with_gif-msaa-1.gif", 50, 1).await?;
+  let mut gif = Gif::<State>::new(1024, initial, Some(4)).await;
+  gif.export("export/with_gif-msaa-3.gif", 50, 1).await?;
 
   Ok(())
-}
-
-struct Model {
-  pub vertex_data: Vec<Vertex>,
-  pub index_data: Vec<u16>,
 }
 
 #[repr(C)]
@@ -94,6 +89,9 @@ fn create_vertices() -> (Vec<Vertex>, Vec<u16>) {
 }
 
 struct Initial {
+  pub vertex_data: Vec<Vertex>,
+  pub index_data: Vec<u16>,
+
   pub camera_position: Point3<f32>,
   pub look_direction: Point3<f32>,
   pub up_direction: Vector3<f32>,
@@ -148,14 +146,9 @@ struct State {
 }
 
 impl<'a> Render<'a> for State {
-  type DrawData = Model;
-  type InitialState = Initial;
+  type Initial = Initial;
 
-  async fn new(
-    ctx: &WgpuContext<'a>,
-    model: &Model,
-    initial: &Initial,
-  ) -> Self {
+  async fn new(ctx: &WgpuContext<'a>, initial: &Initial) -> Self {
     let vs_shader = ctx
       .device
       .create_shader_module(wgpu::include_wgsl!("./shader-vert.wgsl"));
@@ -261,14 +254,14 @@ impl<'a> Render<'a> for State {
     let vertex_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&model.vertex_data),
+        contents: bytemuck::cast_slice(&initial.vertex_data),
         usage: wgpu::BufferUsages::VERTEX,
       });
 
     let index_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Index Buffer"),
-        contents: bytemuck::cast_slice(&model.index_data),
+        contents: bytemuck::cast_slice(&initial.index_data),
         usage: wgpu::BufferUsages::INDEX,
       });
 
@@ -282,7 +275,7 @@ impl<'a> Render<'a> for State {
       project_mat,
       msaa_texture_view,
       depth_texture_view,
-      indices_len: model.index_data.len() as u32,
+      indices_len: initial.index_data.len() as u32,
       rotation_speed: initial.rotation_speed,
     }
   }
