@@ -24,13 +24,11 @@ pub enum RenderTarget<'a> {
 
 #[allow(opaque_hidden_inferred_bound, unused_variables)]
 pub trait Render<'a> {
-  type DrawData;
-  type InitialState;
+  type Initial;
 
   fn new(
     ctx: &WgpuContext<'a>,
-    draw_data: &Self::DrawData,
-    initial_state: &Self::InitialState,
+    initial: &Self::Initial,
   ) -> impl Future<Output = Self>;
   fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>) {
     let size = size.unwrap_or(ctx.size);
@@ -79,13 +77,8 @@ impl<'a, R> Gif<'a, R>
 where
   R: Render<'a>,
 {
-  pub async fn new(
-    size: u32,
-    draw_data: R::DrawData,
-    initial_state: R::InitialState,
-    sample_count: Option<u32>,
-  ) -> Self {
-    let sample_count = sample_count.unwrap_or(1);
+  pub async fn new(size: u32, initial: R::Initial, msaa: bool) -> Self {
+    let sample_count = if msaa { 4 } else { 1 };
 
     let ctx = WgpuContext::new_without_surface(
       size,
@@ -95,7 +88,7 @@ where
     )
     .await;
 
-    let renderer = R::new(&ctx, &draw_data, &initial_state).await;
+    let renderer = R::new(&ctx, &initial).await;
 
     Self {
       renderer,
@@ -239,8 +232,7 @@ where
   window: Option<Arc<Window>>,
   window_title: &'a str,
   window_size: Option<LogicalSize<u32>>,
-  draw_data: R::DrawData,
-  initial_state: R::InitialState,
+  initial: R::Initial,
   sample_count: u32,
   ctx: Option<WgpuContext<'a>>,
   renderer: Option<R>,
@@ -249,18 +241,16 @@ where
   need_redraw: bool,
 }
 
-impl<'a, R: Render<'a>> App<'a, R> {
-  pub fn new(
-    window_title: &'a str,
-    draw_data: R::DrawData,
-    initial_state: R::InitialState,
-  ) -> Self {
+impl<'a, R> App<'a, R>
+where
+  R: Render<'a>,
+{
+  pub fn new(window_title: &'a str, initial: R::Initial) -> Self {
     Self {
       window: None,
       window_title,
       window_size: None,
-      draw_data,
-      initial_state,
+      initial,
       sample_count: 1,
       ctx: None,
       renderer: None,
@@ -303,12 +293,7 @@ impl<'a, R: Render<'a>> App<'a, R> {
     let ctx = WgpuContext::new(window, self.sample_count, None).await;
     self.ctx = Some(ctx);
 
-    let renderer = R::new(
-      self.ctx.as_ref().unwrap(),
-      &self.draw_data,
-      &self.initial_state,
-    )
-    .await;
+    let renderer = R::new(self.ctx.as_ref().unwrap(), &self.initial).await;
     self.renderer = Some(renderer);
   }
 }
