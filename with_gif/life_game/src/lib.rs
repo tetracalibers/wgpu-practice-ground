@@ -41,8 +41,8 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
 
   let initial = setup();
 
-  let mut gif = Gif::<State>::new(512, initial, Some(4)).await;
-  gif.export("export/with_gif-lige_game-2.gif", 30, 10).await?;
+  let mut gif = Gif::<State>::new(512, initial, false).await;
+  gif.export("export/with_gif-lige_game-3.gif", 30, 10).await?;
 
   Ok(())
 }

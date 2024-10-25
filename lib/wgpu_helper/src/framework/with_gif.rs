@@ -77,12 +77,8 @@ impl<'a, R> Gif<'a, R>
 where
   R: Render<'a>,
 {
-  pub async fn new(
-    size: u32,
-    initial: R::Initial,
-    sample_count: Option<u32>,
-  ) -> Self {
-    let sample_count = sample_count.unwrap_or(1);
+  pub async fn new(size: u32, initial: R::Initial, msaa: bool) -> Self {
+    let sample_count = if msaa { 4 } else { 1 };
 
     let ctx = WgpuContext::new_without_surface(
       size,
