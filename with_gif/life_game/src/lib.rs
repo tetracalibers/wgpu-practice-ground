@@ -11,7 +11,6 @@ use wgpu_helper::{
   context::WgpuContext,
   framework::with_gif::{App, Gif, Render, RenderTarget},
 };
-use winit::dpi::LogicalSize;
 
 // グリッドの縦方向と横方向にそれぞれいくつのセルが存在するか
 // 整数値で十分だが、シェーダー側でのキャストが面倒なので最初から浮動小数点値で定義
@@ -32,14 +31,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let (model, initial) = setup();
 
-  let mut app: App<State> = App::new(
-    "with_gif/life_game",
-    Some(LogicalSize::new(512, 512)),
-    model,
-    initial,
-    None,
-    Some(time::Duration::from_millis(150)),
-  );
+  let mut app: App<State> = App::new("with_gif/life_game", model, initial)
+    .with_window_size(512, 512)
+    .with_update_interval(time::Duration::from_millis(150));
   app.run()?;
 
   Ok(())

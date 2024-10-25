@@ -252,25 +252,37 @@ where
 impl<'a, R: Render<'a>> App<'a, R> {
   pub fn new(
     window_title: &'a str,
-    window_size: Option<LogicalSize<u32>>,
     draw_data: R::DrawData,
     initial_state: R::InitialState,
-    sample_count: Option<u32>,
-    update_interval: Option<time::Duration>,
   ) -> Self {
     Self {
       window: None,
       window_title,
-      window_size,
+      window_size: None,
       draw_data,
       initial_state,
-      sample_count: sample_count.unwrap_or(1),
+      sample_count: 1,
       ctx: None,
       renderer: None,
       render_start_time: None,
-      update_interval,
+      update_interval: None,
       need_redraw: true,
     }
+  }
+
+  pub fn with_window_size(mut self, width: u32, height: u32) -> Self {
+    self.window_size = Some(LogicalSize::new(width, height));
+    self
+  }
+
+  pub fn with_update_interval(mut self, interval: time::Duration) -> Self {
+    self.update_interval = Some(interval);
+    self
+  }
+
+  pub fn with_msaa(mut self) -> Self {
+    self.sample_count = 4;
+    self
   }
 
   pub fn run(&mut self) -> Result<()> {
