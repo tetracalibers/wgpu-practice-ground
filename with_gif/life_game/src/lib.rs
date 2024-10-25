@@ -1,6 +1,7 @@
 mod vertex;
 
 use std::error::Error;
+use std::time;
 
 use rand::Rng;
 use vertex::{Vertex, VERTICES};
@@ -30,8 +31,13 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let (model, initial) = setup();
 
-  let mut app: App<State> =
-    App::new("with_gif/life_game", model, initial, None);
+  let mut app: App<State> = App::new(
+    "with_gif/life_game",
+    model,
+    initial,
+    None,
+    Some(time::Duration::from_millis(150)),
+  );
   app.run()?;
 
   Ok(())

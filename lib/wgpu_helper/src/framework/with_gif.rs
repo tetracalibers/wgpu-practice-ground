@@ -4,8 +4,8 @@ use anyhow::Result;
 use winit::{
   application::ApplicationHandler,
   dpi::PhysicalSize,
-  event::{ElementState, KeyEvent, WindowEvent},
-  event_loop::{ActiveEventLoop, EventLoop},
+  event::{ElementState, KeyEvent, StartCause, WindowEvent},
+  event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
   keyboard::{KeyCode, PhysicalKey},
   window::{Window, WindowId},
 };
@@ -244,6 +244,8 @@ where
   ctx: Option<WgpuContext<'a>>,
   renderer: Option<R>,
   render_start_time: Option<time::Instant>,
+  update_interval: Option<time::Duration>,
+  need_redraw: bool,
 }
 
 impl<'a, R: Render<'a>> App<'a, R> {
@@ -252,6 +254,7 @@ impl<'a, R: Render<'a>> App<'a, R> {
     draw_data: R::DrawData,
     initial_state: R::InitialState,
     sample_count: Option<u32>,
+    update_interval: Option<time::Duration>,
   ) -> Self {
     Self {
       window: None,
@@ -262,6 +265,8 @@ impl<'a, R: Render<'a>> App<'a, R> {
       ctx: None,
       renderer: None,
       render_start_time: None,
+      update_interval,
+      need_redraw: true,
     }
   }
 
@@ -303,6 +308,7 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
     pollster::block_on(self.init(self.window.as_ref().unwrap().clone()));
 
     self.render_start_time = Some(time::Instant::now());
+    self.need_redraw = true;
   }
 
   fn window_event(
@@ -388,17 +394,30 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
     }
   }
 
-  // TODO: 更新間隔を指定できるようにする
-  // - need_redrawフラグを追加
-  // - 引数にupdate_interval: Option<Duration>を追加
-  // - update_intervalがSomeの場合、set_control_flowによる待機処理を入れる
-  // 参考: tutorial/life-game/src/app.rs
-  fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+  fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
+    if let StartCause::ResumeTimeReached { .. } = cause {
+      self.need_redraw = true;
+    }
+  }
+
+  fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    if !self.need_redraw {
+      return;
+    }
+
     let binding = self.window();
     let window = match &binding {
       Some(window) => window,
       None => return,
     };
     window.request_redraw();
+
+    if let Some(update_interval) = self.update_interval {
+      self.need_redraw = false;
+
+      event_loop.set_control_flow(ControlFlow::WaitUntil(
+        time::Instant::now() + update_interval,
+      ));
+    }
   }
 }

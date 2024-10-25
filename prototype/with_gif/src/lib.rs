@@ -32,7 +32,7 @@ pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
     rotation_speed: 1.,
   };
 
-  let mut app: App<State> = App::new(title, model, initial, Some(4));
+  let mut app: App<State> = App::new(title, model, initial, Some(4), None);
   app.run()?;
 
   Ok(())
