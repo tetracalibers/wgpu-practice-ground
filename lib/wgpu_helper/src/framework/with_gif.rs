@@ -3,7 +3,7 @@ use std::{future::Future, iter, mem, sync::Arc, time};
 use anyhow::Result;
 use winit::{
   application::ApplicationHandler,
-  dpi::PhysicalSize,
+  dpi::{LogicalSize, PhysicalSize},
   event::{ElementState, KeyEvent, StartCause, WindowEvent},
   event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
   keyboard::{KeyCode, PhysicalKey},
@@ -238,6 +238,7 @@ where
 {
   window: Option<Arc<Window>>,
   window_title: &'a str,
+  window_size: Option<LogicalSize<u32>>,
   draw_data: R::DrawData,
   initial_state: R::InitialState,
   sample_count: u32,
@@ -251,6 +252,7 @@ where
 impl<'a, R: Render<'a>> App<'a, R> {
   pub fn new(
     window_title: &'a str,
+    window_size: Option<LogicalSize<u32>>,
     draw_data: R::DrawData,
     initial_state: R::InitialState,
     sample_count: Option<u32>,
@@ -259,6 +261,7 @@ impl<'a, R: Render<'a>> App<'a, R> {
     Self {
       window: None,
       window_title,
+      window_size,
       draw_data,
       initial_state,
       sample_count: sample_count.unwrap_or(1),
@@ -300,8 +303,13 @@ impl<'a, R: Render<'a>> App<'a, R> {
 
 impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-    let window_attributes =
+    let mut window_attributes =
       Window::default_attributes().with_title(self.window_title);
+
+    if let Some(window_size) = self.window_size {
+      window_attributes = window_attributes.with_max_inner_size(window_size);
+    }
+
     let window = event_loop.create_window(window_attributes).unwrap();
     self.window = Some(Arc::new(window));
 
