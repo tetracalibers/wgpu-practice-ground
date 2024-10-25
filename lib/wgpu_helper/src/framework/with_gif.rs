@@ -3,9 +3,9 @@ use std::{future::Future, iter, mem, sync::Arc, time};
 use anyhow::Result;
 use winit::{
   application::ApplicationHandler,
-  dpi::PhysicalSize,
-  event::{ElementState, KeyEvent, WindowEvent},
-  event_loop::{ActiveEventLoop, EventLoop},
+  dpi::{LogicalSize, PhysicalSize},
+  event::{ElementState, KeyEvent, StartCause, WindowEvent},
+  event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
   keyboard::{KeyCode, PhysicalKey},
   window::{Window, WindowId},
 };
@@ -22,7 +22,7 @@ pub enum RenderTarget<'a> {
   Texture(&'a wgpu::Texture),
 }
 
-#[allow(opaque_hidden_inferred_bound)]
+#[allow(opaque_hidden_inferred_bound, unused_variables)]
 pub trait Render<'a> {
   type DrawData;
   type InitialState;
@@ -32,11 +32,21 @@ pub trait Render<'a> {
     draw_data: &Self::DrawData,
     initial_state: &Self::InitialState,
   ) -> impl Future<Output = Self>;
-  fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>);
-  fn process_event(&mut self, event: &WindowEvent) -> bool;
-  fn update(&mut self, ctx: &WgpuContext, dt: time::Duration);
+  fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>) {
+    let size = size.unwrap_or(ctx.size);
+
+    if size.width > 0 && size.height > 0 {
+      if let Some(surface) = &ctx.surface {
+        surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
+      }
+    }
+  }
+  fn process_event(&mut self, event: &WindowEvent) -> bool {
+    false
+  }
+  fn update(&mut self, ctx: &WgpuContext, dt: time::Duration) {}
   fn draw(
-    &self,
+    &mut self,
     encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: u32,
@@ -228,12 +238,15 @@ where
 {
   window: Option<Arc<Window>>,
   window_title: &'a str,
+  window_size: Option<LogicalSize<u32>>,
   draw_data: R::DrawData,
   initial_state: R::InitialState,
   sample_count: u32,
   ctx: Option<WgpuContext<'a>>,
   renderer: Option<R>,
   render_start_time: Option<time::Instant>,
+  update_interval: Option<time::Duration>,
+  need_redraw: bool,
 }
 
 impl<'a, R: Render<'a>> App<'a, R> {
@@ -241,18 +254,35 @@ impl<'a, R: Render<'a>> App<'a, R> {
     window_title: &'a str,
     draw_data: R::DrawData,
     initial_state: R::InitialState,
-    sample_count: Option<u32>,
   ) -> Self {
     Self {
       window: None,
       window_title,
+      window_size: None,
       draw_data,
       initial_state,
-      sample_count: sample_count.unwrap_or(1),
+      sample_count: 1,
       ctx: None,
       renderer: None,
       render_start_time: None,
+      update_interval: None,
+      need_redraw: true,
     }
+  }
+
+  pub fn with_window_size(mut self, width: u32, height: u32) -> Self {
+    self.window_size = Some(LogicalSize::new(width, height));
+    self
+  }
+
+  pub fn with_update_interval(mut self, interval: time::Duration) -> Self {
+    self.update_interval = Some(interval);
+    self
+  }
+
+  pub fn with_msaa(mut self) -> Self {
+    self.sample_count = 4;
+    self
   }
 
   pub fn run(&mut self) -> Result<()> {
@@ -285,14 +315,20 @@ impl<'a, R: Render<'a>> App<'a, R> {
 
 impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-    let window_attributes =
+    let mut window_attributes =
       Window::default_attributes().with_title(self.window_title);
+
+    if let Some(window_size) = self.window_size {
+      window_attributes = window_attributes.with_max_inner_size(window_size);
+    }
+
     let window = event_loop.create_window(window_attributes).unwrap();
     self.window = Some(Arc::new(window));
 
     pollster::block_on(self.init(self.window.as_ref().unwrap().clone()));
 
     self.render_start_time = Some(time::Instant::now());
+    self.need_redraw = true;
   }
 
   fn window_event(
@@ -378,17 +414,30 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
     }
   }
 
-  // TODO: 更新間隔を指定できるようにする
-  // - need_redrawフラグを追加
-  // - 引数にupdate_interval: Option<Duration>を追加
-  // - update_intervalがSomeの場合、set_control_flowによる待機処理を入れる
-  // 参考: tutorial/life-game/src/app.rs
-  fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+  fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
+    if let StartCause::ResumeTimeReached { .. } = cause {
+      self.need_redraw = true;
+    }
+  }
+
+  fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    if !self.need_redraw {
+      return;
+    }
+
     let binding = self.window();
     let window = match &binding {
       Some(window) => window,
       None => return,
     };
     window.request_redraw();
+
+    if let Some(update_interval) = self.update_interval {
+      self.need_redraw = false;
+
+      event_loop.set_control_flow(ControlFlow::WaitUntil(
+        time::Instant::now() + update_interval,
+      ));
+    }
   }
 }

@@ -61,3 +61,11 @@ cargo run -- prototype/with_gif
 ```bash
 cargo run -- export/with_gif
 ```
+
+```bash
+cargo run -- with_gif/life_game
+```
+
+```bash
+cargo run -- export:gif/life_game
+```

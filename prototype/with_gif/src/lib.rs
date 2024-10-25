@@ -11,7 +11,6 @@ use wgpu_helper::transforms as wt;
 use wgpu_helper::vertex_data as vd;
 use wgpu_helper::vertex_data::cube::Cube;
 use winit::dpi::PhysicalSize;
-use winit::event::WindowEvent;
 
 pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
   env_logger::init();
@@ -33,7 +32,7 @@ pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
     rotation_speed: 1.,
   };
 
-  let mut app: App<State> = App::new(title, model, initial, Some(4));
+  let mut app: App<State> = App::new(title, model, initial).with_msaa();
   app.run()?;
 
   Ok(())
@@ -311,10 +310,6 @@ impl<'a> Render<'a> for State {
     }
   }
 
-  fn process_event(&mut self, _event: &WindowEvent) -> bool {
-    false
-  }
-
   fn update(&mut self, ctx: &ws::WgpuContext, dt: time::Duration) {
     let dt = self.rotation_speed * dt.as_secs_f32();
 
@@ -345,7 +340,7 @@ impl<'a> Render<'a> for State {
   }
 
   fn draw(
-    &self,
+    &mut self,
     encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: u32,

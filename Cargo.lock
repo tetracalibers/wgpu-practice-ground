@@ -3426,6 +3426,7 @@ dependencies = [
  "rotate_cube_basic",
  "text-renderer",
  "with_gif",
+ "with_gif_life_game",
 ]
 
 [[package]]
@@ -3799,6 +3800,22 @@ dependencies = [
 
 [[package]]
 name = "with_gif"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cgmath",
+ "enum-rotate",
+ "env_logger",
+ "pollster",
+ "rand",
+ "wgpu 22.1.0",
+ "wgpu_helper",
+ "winit",
+]
+
+[[package]]
+name = "with_gif_life_game"
 version = "0.1.0"
 dependencies = [
  "anyhow",
