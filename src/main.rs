@@ -23,7 +23,9 @@ fn main() -> Result<(), Box<dyn Error>> {
       Ok(())
     }
     "tutorial/hello-glyphon" => hello_glyphon::run(),
-    "tutorial/compute_single_thread" => Ok(compute_single_thread::run()?),
+    "tutorial/compute_single_thread" => {
+      Ok(pollster::block_on(compute_single_thread::run())?)
+    }
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
     "prototype/with_gif" => Ok(with_gif::run("with_gif")?),

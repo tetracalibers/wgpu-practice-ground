@@ -580,6 +580,7 @@ dependencies = [
  "cgmath",
  "enum-rotate",
  "env_logger",
+ "futures-intrusive",
  "pollster",
  "rand",
  "wgpu 22.1.0",
