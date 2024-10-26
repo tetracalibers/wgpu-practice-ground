@@ -1,4 +1,4 @@
-use std::{error::Error, iter, mem};
+use std::{error::Error, iter};
 
 use wgpu_helper::context as helper_util;
 
@@ -9,7 +9,8 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // define constants
   //
 
-  let buffer_size = mem::size_of::<f32>() as wgpu::BufferAddress;
+  // std::mem::size_of::<f32>()で求められるが、ハードコーディングしてしまう
+  let buffer_size = 4;
 
   //
   // init wgpu
@@ -167,7 +168,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     data
       // 指定したサイズ（ここでは4バイト）ごとにスライスを分割
       // もしdataの長さが4の倍数でない場合、chunks_exactは余ったバイトを無視する
-      .chunks_exact(4)
+      .chunks_exact(buffer_size as usize)
       // neは「ネイティブエンディアン」の略で、実行環境のエンディアン（バイト順序）に依存して変換を行う
       // 引数は[u8; 4]型を要求するため、try_intoを使って変換する
       .map(|b| f32::from_ne_bytes(b.try_into().unwrap()))
