@@ -575,17 +575,10 @@ dependencies = [
 name = "compute_single_thread"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "bytemuck",
- "cgmath",
- "enum-rotate",
  "env_logger",
  "futures-intrusive",
- "pollster",
- "rand",
  "wgpu 22.1.0",
  "wgpu_helper",
- "winit",
 ]
 
 [[package]]
