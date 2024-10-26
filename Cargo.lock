@@ -572,6 +572,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "compute_atomic_add"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "futures-intrusive",
+ "num-traits",
+ "wgpu 22.1.0",
+ "wgpu_helper",
+]
+
+[[package]]
 name = "compute_single_thread"
 version = "0.1.0"
 dependencies = [
@@ -3428,6 +3440,7 @@ dependencies = [
  "ch04-buffer",
  "ch05-indice",
  "ch06-texture",
+ "compute_atomic_add",
  "compute_single_thread",
  "cube_blinn_phong",
  "hello-glyphon",

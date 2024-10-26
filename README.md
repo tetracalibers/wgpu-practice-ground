@@ -73,3 +73,7 @@ cargo run -- export:gif/life_game
 ```bash
 cargo run -- tutorial/compute_single_thread
 ```
+
+```bash
+cargo run -- tutorial/compute_atomic_add
+```

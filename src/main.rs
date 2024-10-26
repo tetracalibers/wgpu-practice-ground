@@ -26,6 +26,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     "tutorial/compute_single_thread" => {
       Ok(pollster::block_on(compute_single_thread::run())?)
     }
+    "tutorial/compute_atomic_add" => {
+      Ok(pollster::block_on(compute_atomic_add::run())?)
+    }
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
     "prototype/with_gif" => Ok(with_gif::run("with_gif")?),
