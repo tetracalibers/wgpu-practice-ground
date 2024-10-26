@@ -575,8 +575,10 @@ dependencies = [
 name = "compute_atomic_add"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "env_logger",
  "futures-intrusive",
+ "num-traits",
  "wgpu 22.1.0",
  "wgpu_helper",
 ]

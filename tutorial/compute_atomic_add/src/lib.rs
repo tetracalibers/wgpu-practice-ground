@@ -1,5 +1,7 @@
 use std::{error::Error, iter};
 
+use num_traits::FromBytes;
+use wgpu::util::DeviceExt;
 use wgpu_helper::context as helper_util;
 
 pub async fn run() -> Result<(), Box<dyn Error>> {
@@ -9,7 +11,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // define constants
   //
 
-  // std::mem::size_of::<f32>()で求められるが、ハードコーディングしてしまう
+  // std::mem::size_of::<i32>()で求められるが、ハードコーディングしてしまう
   let buffer_size = 4;
 
   //
@@ -39,14 +41,30 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // create a buffer to store data
   //
 
-  let store_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-    label: Some("Storage Buffer for store value"),
-    size: buffer_size,
-    usage: wgpu::BufferUsages::STORAGE // compute shaderからアクセスできるように
-      | wgpu::BufferUsages::COPY_SRC // read可能
-      | wgpu::BufferUsages::COPY_DST, // write可能
-    mapped_at_creation: false,
-  });
+  let input_data_buffer =
+    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+      label: Some("Storage Buffer for input data"),
+      contents: bytemuck::cast_slice(&[4, 5, 6]),
+      usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+    });
+
+  let non_atomic_result_data_buffer =
+    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+      label: Some("Storage Buffer for result data (non atomic)"),
+      contents: bytemuck::cast_slice(&[0, 0, 0]),
+      usage: wgpu::BufferUsages::STORAGE
+        | wgpu::BufferUsages::COPY_DST
+        | wgpu::BufferUsages::COPY_SRC,
+    });
+
+  let atomic_result_data_buffer =
+    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+      label: Some("Storage Buffer for result data (atomic)"),
+      contents: bytemuck::cast_slice(&[0, 0, 0]),
+      usage: wgpu::BufferUsages::STORAGE
+        | wgpu::BufferUsages::COPY_DST
+        | wgpu::BufferUsages::COPY_SRC,
+    });
 
   //
   // create bind_group
@@ -54,14 +72,26 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 
   let bind_group_layout = helper_util::create_bind_group_layout(
     &device,
-    &[wgpu::BufferBindingType::Storage { read_only: false }],
-    &[wgpu::ShaderStages::COMPUTE],
+    &[
+      wgpu::BufferBindingType::Storage { read_only: true }, // input
+      wgpu::BufferBindingType::Storage { read_only: false }, // result (non atomic)
+      wgpu::BufferBindingType::Storage { read_only: false }, // result (atomic)
+    ],
+    &[
+      wgpu::ShaderStages::COMPUTE,
+      wgpu::ShaderStages::COMPUTE,
+      wgpu::ShaderStages::COMPUTE,
+    ],
   );
 
   let bind_group = helper_util::create_bind_group(
     &device,
     &bind_group_layout,
-    &[store_buffer.as_entire_binding()],
+    &[
+      input_data_buffer.as_entire_binding(),
+      non_atomic_result_data_buffer.as_entire_binding(),
+      atomic_result_data_buffer.as_entire_binding(),
+    ],
   );
 
   //
@@ -86,71 +116,103 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     });
 
   //
-  // create command encoder
+  // create command encode
   //
 
-  let mut encoder = device
+  let mut command_encoder = device
     .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
   //
   // encode compute pass
   //
 
-  let mut compute_pass =
-    encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+  let mut compute_pass_encoder =
+    command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
       label: Some("Compute Pass"),
       timestamp_writes: None,
     });
 
-  compute_pass.set_pipeline(&compute_pipeline);
-  compute_pass.set_bind_group(0, &bind_group, &[]);
-  compute_pass.dispatch_workgroups(1, 1, 1);
+  compute_pass_encoder.set_pipeline(&compute_pipeline);
+  compute_pass_encoder.set_bind_group(0, &bind_group, &[]);
+  // シェーダーのローカルワークグループは `8`に設定されているため、必要なのは 1つのワークグループだけ
+  compute_pass_encoder.dispatch_workgroups(1, 1, 1);
 
-  drop(compute_pass);
-
-  //
-  // copy buffer to GPU
-  //
-
-  // 計算が完了した後、メモリに直接アクセスすることはできない
-  // まず、一時的なステージング領域にデータをコピーし、その後、CPUに戻す必要がある
-  // この操作を行うためには、メモリバッファを作成する際にGPUBufferUsage.MAP_READフラグを指定する必要がある
-
-  // Note:
-  // バッファの使用用途にMAP_READフラグが含まれる場合、同時に使用できる他の用途はCOPY_DSTのみ
-  // つまり、コンピュートシェーダーで使用するSTORAGEフラグとMAP_READフラグを同時に設定することはできない
-  // この制約を回避するため、データをRust側に戻す際には、一時的なステージング用のメモリブロックを使用する必要がある
-
-  let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-    label: Some("Storage Buffer for staging"),
-    size: buffer_size,
-    usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-    mapped_at_creation: false,
-  });
-
-  // コンピュートシェーダーの結果を一時的なステージングバッファにコピーする
-  encoder.copy_buffer_to_buffer(
-    &store_buffer,
-    0,
-    &staging_buffer,
-    0,
-    buffer_size,
-  );
+  drop(compute_pass_encoder);
 
   //
   // execute commands
   //
 
-  queue.submit(iter::once(encoder.finish()));
+  queue.submit(iter::once(command_encoder.finish()));
 
   //
-  // map and read buffer
+  // result
   //
 
-  // データがステージングメモリに移動したら、map_asyncを使ってGPUメモリをロックし、GPUからCPUにコピーできるようにする
-  // ref: https://sotrh.github.io/learn-wgpu/news/0.13/
+  let non_atomic_result_data: Vec<i32> = get_gpu_buffer(
+    &device,
+    &queue,
+    &non_atomic_result_data_buffer,
+    buffer_size,
+  )
+  .await;
 
-  let buffer_slice = staging_buffer.slice(..);
+  let atomic_result_data: Vec<i32> =
+    get_gpu_buffer(&device, &queue, &atomic_result_data_buffer, buffer_size)
+      .await;
+
+  // アトミックロックを使用した場合は正しい結果が得られる
+  // アトミックロックを使用しない場合は誤った結果が出る可能性がある（まれに正しい結果が得られることもあるが、多くの場合は失敗する）
+  println!("  no atomic array contents: {:?}", non_atomic_result_data);
+  println!("with atomic array contents: {:?}", atomic_result_data);
+
+  Ok(())
+}
+
+async fn get_gpu_buffer<T>(
+  device: &wgpu::Device,
+  queue: &wgpu::Queue,
+  src_buffer: &wgpu::Buffer,
+  buffer_size: u64,
+) -> Vec<T>
+where
+  T: FromBytes<Bytes = [u8; 4]>,
+{
+  let tmp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+    label: Some("tmp_buffer"),
+    size: buffer_size,
+    usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+    mapped_at_creation: false,
+  });
+
+  let mut command_encoder =
+    device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+      label: Some("command_encoder for tmp"),
+    });
+
+  //
+  // Encode commands for copying buffer to buffer
+  //
+
+  command_encoder.copy_buffer_to_buffer(
+    &src_buffer,
+    0,
+    &tmp_buffer,
+    0,
+    buffer_size,
+  );
+
+  //
+  // Submit GPU commands
+  //
+
+  queue.submit(iter::once(command_encoder.finish()));
+
+  //
+  // Read buffer
+  //
+
+  let buffer_slice = tmp_buffer.slice(..);
 
   let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
   buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
@@ -159,26 +221,15 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   device.poll(wgpu::Maintain::Wait);
   rx.receive().await.unwrap().unwrap();
 
-  // コピーが完了したら、そのデータをデバッグ用のコンソールに出力する
+  let data_view = buffer_slice.get_mapped_range();
 
-  let data = buffer_slice.get_mapped_range();
+  let data = data_view
+    .chunks_exact(buffer_size as usize)
+    .map(|b| FromBytes::from_ne_bytes(&b.try_into().unwrap()))
+    .collect::<Vec<T>>();
 
-  println!(
-    "Value after computation: {:?}",
-    data
-      // 指定したサイズ（ここでは4バイト）ごとにスライスを分割
-      // もしdataの長さが4の倍数でない場合、chunks_exactは余ったバイトを無視する
-      .chunks_exact(buffer_size as usize)
-      // neは「ネイティブエンディアン」の略で、実行環境のエンディアン（バイト順序）に依存して変換を行う
-      // 引数は[u8; 4]型を要求するため、try_intoを使って変換する
-      .map(|b| f32::from_ne_bytes(b.try_into().unwrap()))
-      .collect::<Vec<f32>>()
-  );
+  drop(data_view);
+  tmp_buffer.unmap();
 
-  drop(data);
-
-  // マッピングを解除してメモリを解放
-  staging_buffer.unmap();
-
-  Ok(())
+  data
 }
