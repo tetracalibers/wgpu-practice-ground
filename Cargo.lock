@@ -572,6 +572,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "compute_single_thread"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "futures-intrusive",
+ "wgpu 22.1.0",
+ "wgpu_helper",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3418,6 +3428,7 @@ dependencies = [
  "ch04-buffer",
  "ch05-indice",
  "ch06-texture",
+ "compute_single_thread",
  "cube_blinn_phong",
  "hello-glyphon",
  "life-game",

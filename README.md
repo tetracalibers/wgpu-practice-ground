@@ -69,3 +69,7 @@ cargo run -- with_gif/life_game
 ```bash
 cargo run -- export:gif/life_game
 ```
+
+```bash
+cargo run -- tutorial/compute_single_thread
+```
