@@ -1295,6 +1295,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "instanced_cube_sphere_torus_direction_light_1"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cgmath",
+ "enum-rotate",
+ "env_logger",
+ "pollster",
+ "rand",
+ "wgpu 22.1.0",
+ "wgpu_helper",
+ "winit",
+]
+
+[[package]]
 name = "interpolate_name"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3461,6 +3477,7 @@ dependencies = [
  "cube_blinn_phong",
  "hello-glyphon",
  "instanced_cube_sphere_torus_base",
+ "instanced_cube_sphere_torus_direction_light_1",
  "life-game",
  "pollster",
  "rect-renderer",
