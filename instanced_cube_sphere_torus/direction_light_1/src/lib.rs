@@ -30,7 +30,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
   let initial = setup();
 
   let mut app: App<State> =
-    App::new("instanced_cube_sphere_torus - base", initial).with_msaa();
+    App::new("instanced_cube_sphere_torus - direction_light_1", initial)
+      .with_msaa();
   app.run()?;
 
   Ok(())
