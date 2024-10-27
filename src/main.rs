@@ -43,6 +43,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     "practice/rotate_cube_basic" => {
       Ok(rotate_cube_basic::run("rotate_cube_basic")?)
     }
+    "instanced_cube_sphere_torus/base" => {
+      Ok(instanced_cube_sphere_torus_base::run()?)
+    }
     _ => {
       eprintln!("Not found: {}", target);
       Ok(())
