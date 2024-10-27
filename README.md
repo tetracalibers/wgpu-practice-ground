@@ -77,3 +77,11 @@ cargo run -- tutorial/compute_single_thread
 ```bash
 cargo run -- tutorial/compute_atomic_add
 ```
+
+```bash
+cargo run -- practice/instanced_cube_sphere_torus
+```
+
+```bash
+cargo run -- export-gif:practice/instanced_cube_sphere_torus
+```

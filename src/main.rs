@@ -43,6 +43,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     "practice/rotate_cube_basic" => {
       Ok(rotate_cube_basic::run("rotate_cube_basic")?)
     }
+    "practice/instanced_cube_sphere_torus" => {
+      Ok(instanced_cube_sphere_torus::run()?)
+    }
+    "export-gif:practice/instanced_cube_sphere_torus" => Ok(
+      pollster::block_on(instanced_cube_sphere_torus::export_gif())?,
+    ),
     _ => {
       eprintln!("Not found: {}", target);
       Ok(())
