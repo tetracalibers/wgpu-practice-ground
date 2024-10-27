@@ -4,24 +4,24 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ch01-window                 = { path = "./tutorial/ch01-window" }
-ch02-surface                = { path = "./tutorial/ch02-surface" }
-ch03-pipeline               = { path = "./tutorial/ch03-pipeline" }
-ch04-buffer                 = { path = "./tutorial/ch04-buffer" }
-ch05-indice                 = { path = "./tutorial/ch05-indice" }
-ch06-texture                = { path = "./tutorial/ch06-texture" }
-life-game                   = { path = "./tutorial/life-game" }
-hello-glyphon               = { path = "./tutorial/hello-glyphon" }
-compute_single_thread       = { path = "./tutorial/compute_single_thread" }
-compute_atomic_add          = { path = "./tutorial/compute_atomic_add" }
-rect-renderer               = { path = "./prototype/rect-renderer" }
-text-renderer               = { path = "./prototype/text-renderer" }
-with_gif                    = { path = "./prototype/with_gif" }
-with_gif_life_game          = { path = "./with_gif/life_game" }
-cube_blinn_phong            = { path = "./practice/cube_blinn_phong" }
-rotate_cube_basic           = { path = "./practice/rotate_cube_basic" }
-instanced_cube_sphere_torus = { path = "./practice/instanced_cube_sphere_torus" }
-pollster                    = "0.3.0"
+ch01-window                      = { path = "./tutorial/ch01-window" }
+ch02-surface                     = { path = "./tutorial/ch02-surface" }
+ch03-pipeline                    = { path = "./tutorial/ch03-pipeline" }
+ch04-buffer                      = { path = "./tutorial/ch04-buffer" }
+ch05-indice                      = { path = "./tutorial/ch05-indice" }
+ch06-texture                     = { path = "./tutorial/ch06-texture" }
+life-game                        = { path = "./tutorial/life-game" }
+hello-glyphon                    = { path = "./tutorial/hello-glyphon" }
+compute_single_thread            = { path = "./tutorial/compute_single_thread" }
+compute_atomic_add               = { path = "./tutorial/compute_atomic_add" }
+rect-renderer                    = { path = "./prototype/rect-renderer" }
+text-renderer                    = { path = "./prototype/text-renderer" }
+with_gif                         = { path = "./prototype/with_gif" }
+with_gif_life_game               = { path = "./with_gif/life_game" }
+cube_blinn_phong                 = { path = "./practice/cube_blinn_phong" }
+rotate_cube_basic                = { path = "./practice/rotate_cube_basic" }
+instanced_cube_sphere_torus_base = { path = "./instanced_cube_sphere_torus/base" }
+pollster                         = "0.3.0"
 
 [workspace]
 
@@ -44,5 +44,5 @@ members = [
   "tutorial/compute_atomic_add",
   "practice/cube_blinn_phong",
   "practice/rotate_cube_basic",
-  "practice/instanced_cube_sphere_torus",
+  "instanced_cube_sphere_torus/base",
 ]

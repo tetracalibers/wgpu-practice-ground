@@ -32,7 +32,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
   let initial = setup(1.0);
 
   let mut app: App<State> =
-    App::new("instanced_cube_sphere_torus", initial).with_msaa();
+    App::new("instanced_cube_sphere_torus - base", initial).with_msaa();
   app.run()?;
 
   Ok(())
@@ -44,7 +44,7 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
   let initial = setup(1.0);
 
   let mut gif = Gif::<State>::new(1024, initial, true).await;
-  gif.export("export/instanced_cube_sphere_torus.gif", 50, 1).await?;
+  gif.export("export/instanced_cube_sphere_torus_base.gif", 50, 1).await?;
 
   Ok(())
 }

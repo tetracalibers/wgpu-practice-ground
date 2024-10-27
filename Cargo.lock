@@ -1279,7 +1279,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "instanced_cube_sphere_torus"
+name = "instanced_cube_sphere_torus_base"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3460,7 +3460,7 @@ dependencies = [
  "compute_single_thread",
  "cube_blinn_phong",
  "hello-glyphon",
- "instanced_cube_sphere_torus",
+ "instanced_cube_sphere_torus_base",
  "life-game",
  "pollster",
  "rect-renderer",

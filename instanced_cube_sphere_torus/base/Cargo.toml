@@ -1,5 +1,5 @@
 [package]
-name    = "instanced_cube_sphere_torus"
+name    = "instanced_cube_sphere_torus_base"
 version = "0.1.0"
 edition = "2021"
 
