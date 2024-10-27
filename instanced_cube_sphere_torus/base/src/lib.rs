@@ -263,7 +263,9 @@ impl<'a> Render<'a> for State {
     render_pass.set_pipeline(&self.pipeline);
     render_pass.set_bind_group(0, &self.vert_bind_group, &[]);
 
+    //
     // draw cubes
+    //
     render_pass.set_vertex_buffer(0, self.shapes.cube.vertex_buffer.slice(..));
     render_pass.set_index_buffer(
       self.shapes.cube.index_buffer.slice(..),
@@ -271,7 +273,9 @@ impl<'a> Render<'a> for State {
     );
     render_pass.draw_indexed(0..self.shapes.cube.index_count, 0, 0..NUM_CUBES);
 
+    //
     // draw spheres
+    //
     render_pass
       .set_vertex_buffer(0, self.shapes.sphere.vertex_buffer.slice(..));
     render_pass.set_index_buffer(
@@ -284,7 +288,9 @@ impl<'a> Render<'a> for State {
       NUM_CUBES..NUM_CUBES + NUM_SPHERES,
     );
 
+    //
     // draw tori
+    //
     render_pass.set_vertex_buffer(0, self.shapes.torus.vertex_buffer.slice(..));
     render_pass.set_index_buffer(
       self.shapes.torus.index_buffer.slice(..),
