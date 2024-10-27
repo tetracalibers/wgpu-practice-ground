@@ -8,7 +8,7 @@ use instance_defs::{Matrices, Shapes, Vertex};
 use wgpu::util::DeviceExt;
 use wgpu_helper::context as helper_util;
 use wgpu_helper::context::WgpuContext;
-use wgpu_helper::framework::with_gif::{App, Gif, Render, RenderTarget};
+use wgpu_helper::framework::with_gif::{App, Render, RenderTarget};
 use wgpu_helper::transforms as wt;
 use winit::dpi::PhysicalSize;
 
@@ -34,17 +34,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
   let mut app: App<State> =
     App::new("instanced_cube_sphere_torus - base", initial).with_msaa();
   app.run()?;
-
-  Ok(())
-}
-
-pub async fn export_gif() -> Result<(), Box<dyn Error>> {
-  env_logger::init();
-
-  let initial = setup(1.0);
-
-  let mut gif = Gif::<State>::new(1024, initial, true).await;
-  gif.export("export/instanced_cube_sphere_torus_base.gif", 50, 1).await?;
 
   Ok(())
 }

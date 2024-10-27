@@ -46,9 +46,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     "instanced_cube_sphere_torus/base" => {
       Ok(instanced_cube_sphere_torus_base::run()?)
     }
-    "export-gif:instanced_cube_sphere_torus/base" => Ok(pollster::block_on(
-      instanced_cube_sphere_torus_base::export_gif(),
-    )?),
     _ => {
       eprintln!("Not found: {}", target);
       Ok(())
