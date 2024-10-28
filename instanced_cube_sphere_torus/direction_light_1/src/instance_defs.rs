@@ -3,9 +3,9 @@ use bytemuck::{cast_slice, Pod, Zeroable};
 use cgmath::{Matrix, SquareMatrix};
 use rand::Rng;
 use wgpu::util::DeviceExt;
-use wgpu_helper::transforms as wt;
-use wgpu_helper::vertex_data::prelude as vd;
-use wgpu_helper::vertex_data::{cube::Cube, sphere::Sphere, torus::Torus};
+use wgsim::geometry::generator as ge;
+use wgsim::geometry::{Cube, Sphere, Torus};
+use wgsim::matrix;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
@@ -25,7 +25,7 @@ fn cube_vertices() -> Geometry {
     normals,
     indices,
     ..
-  } = vd::create_cube_data(2.0);
+  } = ge::create_cube_data(2.0);
 
   let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
   for i in 0..positions.len() {
@@ -47,7 +47,7 @@ fn sphere_vertices() -> Geometry {
     normals,
     indices,
     ..
-  } = vd::create_sphere_data(2.2, 20, 30);
+  } = ge::create_sphere_data(2.2, 20, 30);
 
   let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
   for i in 0..positions.len() {
@@ -69,7 +69,7 @@ fn torus_vertices() -> Geometry {
     normals,
     indices,
     ..
-  } = vd::create_torus_data(1.8, 0.4, 60, 20);
+  } = ge::create_torus_data(1.8, 0.4, 60, 20);
 
   let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
   for i in 0..positions.len() {
@@ -193,7 +193,7 @@ pub fn create_transform_mat_color(
     }
     let rotation = [rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>()];
     let scale = [1.0, 1.0, 1.0];
-    let m = wt::create_model_mat(translation, rotation, scale);
+    let m = matrix::create_model_mat(translation, rotation, scale);
     let n = (m.invert().unwrap()).transpose();
     let color = [rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>(), 1.0];
     model_mat.push(*(m.as_ref()));
