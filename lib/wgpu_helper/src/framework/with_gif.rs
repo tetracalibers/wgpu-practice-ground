@@ -1,6 +1,5 @@
-use std::{future::Future, iter, mem, sync::Arc, time};
+use std::{error::Error, future::Future, iter, mem, sync::Arc, time};
 
-use anyhow::Result;
 use winit::{
   application::ApplicationHandler,
   dpi::{LogicalSize, PhysicalSize},
@@ -11,11 +10,6 @@ use winit::{
 };
 
 use crate::context::WgpuContext;
-
-pub struct DrawOutput<'a> {
-  pub surface_texture: Option<wgpu::SurfaceTexture>,
-  pub encoder: &'a wgpu::CommandEncoder,
-}
 
 pub enum RenderTarget<'a> {
   Surface(&'a wgpu::Surface<'a>),
@@ -104,7 +98,7 @@ where
     frames: &mut Vec<Vec<u8>>,
     speed: i32,
     size: u16,
-  ) -> anyhow::Result<()> {
+  ) -> Result<(), Box<dyn Error>> {
     use gif::{Encoder, Frame, Repeat};
 
     let mut image = std::fs::File::create(file_path)?;
@@ -124,7 +118,7 @@ where
     file_path: &str,
     scene_count: usize,
     speed: i32,
-  ) -> Result<()> {
+  ) -> Result<(), Box<dyn Error>> {
     let texture_desc = wgpu::TextureDescriptor {
       size: wgpu::Extent3d {
         width: self.size,
@@ -275,7 +269,7 @@ where
     self
   }
 
-  pub fn run(&mut self) -> Result<()> {
+  pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
     let event_loop = EventLoop::builder().build()?;
     event_loop.run_app(self)?;
 
