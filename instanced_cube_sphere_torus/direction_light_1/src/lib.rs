@@ -10,7 +10,7 @@ use light_defs::DirectionLight;
 use wgpu::util::DeviceExt;
 use wgpu_helper::context as helper_util;
 use wgpu_helper::context::WgpuContext;
-use wgpu_helper::framework::with_gif::{App, Render, RenderTarget};
+use wgpu_helper::framework::with_gif::{App, Gif, Render, RenderTarget};
 use wgpu_helper::transforms as wt;
 use winit::dpi::PhysicalSize;
 
@@ -42,6 +42,23 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     App::new("instanced_cube_sphere_torus - direction_light_1", initial)
       .with_msaa();
   app.run()?;
+
+  Ok(())
+}
+
+pub async fn export_gif() -> Result<(), Box<dyn Error>> {
+  env_logger::init();
+
+  let initial = setup(3.);
+
+  let mut gif = Gif::<State>::new(1024, initial, true).await;
+  gif
+    .export(
+      "export/instanced-cube-sphere-torus_direction-light-diffuse-3.gif",
+      50,
+      30,
+    )
+    .await?;
 
   Ok(())
 }
