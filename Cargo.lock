@@ -3535,6 +3535,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "wgsim"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cgmath",
+ "futures-intrusive",
+ "gif",
+ "pollster",
+ "wgpu 22.1.0",
+ "winit",
+]
+
+[[package]]
 name = "widestring"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

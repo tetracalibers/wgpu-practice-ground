@@ -30,6 +30,7 @@ pollster                                      = "0.3.0"
 members = [
   "lib/window_app",
   "lib/wgpu_helper",
+  "lib/wgsim",
   "prototype/rect-renderer",
   "prototype/text-renderer",
   "prototype/with_gif",
