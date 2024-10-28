@@ -1298,7 +1298,7 @@ dependencies = [
  "pollster",
  "rand",
  "wgpu 22.1.0",
- "wgpu_helper",
+ "wgsim",
  "winit",
 ]
 
@@ -1314,7 +1314,7 @@ dependencies = [
  "pollster",
  "rand",
  "wgpu 22.1.0",
- "wgpu_helper",
+ "wgsim",
  "winit",
 ]
 
@@ -3890,7 +3890,7 @@ dependencies = [
  "pollster",
  "rand",
  "wgpu 22.1.0",
- "wgpu_helper",
+ "wgsim",
  "winit",
 ]
 
