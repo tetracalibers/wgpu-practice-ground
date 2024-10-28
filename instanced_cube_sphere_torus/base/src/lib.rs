@@ -6,10 +6,12 @@ use bytemuck::cast_slice;
 use cgmath::{Matrix4, Point3, Vector3};
 use instance_defs::{Matrices, Shapes, Vertex};
 use wgpu::util::DeviceExt;
-use wgpu_helper::context as helper_util;
-use wgpu_helper::context::WgpuContext;
-use wgpu_helper::framework::with_gif::{App, Render, RenderTarget};
-use wgpu_helper::transforms as wt;
+use wgsim::app::App;
+use wgsim::ctx::WgpuContext;
+use wgsim::matrix;
+use wgsim::ppl::RenderPipelineBuilder;
+use wgsim::render::{Render, RenderTarget};
+use wgsim::util;
 use winit::dpi::PhysicalSize;
 
 const NUM_CUBES: u32 = 50;
@@ -83,12 +85,12 @@ impl<'a> Render<'a> for State {
       color_vec,
     } = instance_defs::create_transform_mat_color(objects_count, true);
 
-    let view_mat = wt::create_view_mat(
+    let view_mat = matrix::create_view_mat(
       initial.camera_position,
       initial.look_direction,
       initial.up_direction,
     );
-    let project_mat = wt::create_projection_mat(aspect, true);
+    let project_mat = matrix::create_projection_mat(aspect, true);
     let vp_mat = project_mat * view_mat;
 
     //
@@ -127,7 +129,7 @@ impl<'a> Render<'a> for State {
     // uniform bind group for vertex shader
     //
 
-    let vert_bind_group_layout = helper_util::create_bind_group_layout(
+    let vert_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
       &[
         wgpu::BufferBindingType::Uniform,
@@ -143,7 +145,7 @@ impl<'a> Render<'a> for State {
       ],
     );
 
-    let vert_bind_group = helper_util::create_bind_group(
+    let vert_bind_group = util::create_bind_group(
       &ctx.device,
       &vert_bind_group_layout,
       &[
@@ -158,11 +160,11 @@ impl<'a> Render<'a> for State {
     // pipeline
     //
 
-    let vertex_buffer_layout = wgpu::VertexBufferLayout {
+    let vertex_buffer_layout = [wgpu::VertexBufferLayout {
       array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
       step_mode: wgpu::VertexStepMode::Vertex,
       attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
-    };
+    }];
 
     let pipeline_layout =
       ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -171,21 +173,20 @@ impl<'a> Render<'a> for State {
         push_constant_ranges: &[],
       });
 
-    let mut render = helper_util::RenderSet {
-      vs_shader: Some(&vs_shader),
-      fs_shader: Some(&fs_shader),
-      pipeline_layout: Some(&pipeline_layout),
-      vertex_buffer_layout: &[vertex_buffer_layout],
-      ..Default::default()
-    };
-    let pipeline = render.new(&ctx);
+    let pipeline_builder = RenderPipelineBuilder::new(&ctx)
+      .vs_shader(&vs_shader, "vs_main")
+      .fs_shader(&fs_shader, "fs_main")
+      .pipeline_layout(&pipeline_layout)
+      .vertex_buffer_layout(&vertex_buffer_layout);
+
+    let pipeline = pipeline_builder.build();
 
     //
     // texture views
     //
 
-    let msaa_texture_view = helper_util::create_msaa_texture_view(&ctx);
-    let depth_texture_view = helper_util::create_depth_view(&ctx);
+    let msaa_texture_view = util::create_msaa_texture_view(&ctx);
+    let depth_texture_view = util::create_depth_view(&ctx);
 
     //
     // vertex and index buffers for objects
@@ -211,13 +212,15 @@ impl<'a> Render<'a> for State {
         surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
       }
 
-      self.project_mat =
-        wt::create_projection_mat(size.width as f32 / size.height as f32, true);
+      self.project_mat = matrix::create_projection_mat(
+        size.width as f32 / size.height as f32,
+        true,
+      );
 
-      self.depth_texture_view = helper_util::create_depth_view(ctx);
+      self.depth_texture_view = util::create_depth_view(ctx);
 
       if ctx.sample_count > 1 {
-        self.msaa_texture_view = helper_util::create_msaa_texture_view(&ctx);
+        self.msaa_texture_view = util::create_msaa_texture_view(&ctx);
       }
     }
   }
@@ -241,16 +244,16 @@ impl<'a> Render<'a> for State {
       }
     };
 
-    let color_attach = helper_util::create_color_attachment(&view);
+    let color_attach = util::create_color_attachment(&view);
     let msaa_attach =
-      helper_util::create_msaa_color_attachment(&view, &self.msaa_texture_view);
+      util::create_msaa_color_attachment(&view, &self.msaa_texture_view);
     let color_attachment = if sample_count == 1 {
       color_attach
     } else {
       msaa_attach
     };
     let depth_attachment =
-      helper_util::create_depth_stencil_attachment(&self.depth_texture_view);
+      util::create_depth_stencil_attachment(&self.depth_texture_view);
 
     let mut render_pass =
       encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

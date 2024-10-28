@@ -5,11 +5,15 @@ use std::{mem, time};
 use bytemuck::{Pod, Zeroable};
 use cgmath::*;
 use wgpu::util::DeviceExt;
-use wgpu_helper::context::{self as ws, WgpuContext};
-use wgpu_helper::framework::with_gif::{App, Gif, Render, RenderTarget};
-use wgpu_helper::transforms as wt;
-use wgpu_helper::vertex_data as vd;
-use wgpu_helper::vertex_data::cube::Cube;
+use wgsim::app::App;
+use wgsim::ctx::WgpuContext;
+use wgsim::export::Gif;
+use wgsim::geometry::generator as ge;
+use wgsim::geometry::Cube;
+use wgsim::matrix;
+use wgsim::ppl::RenderPipelineBuilder;
+use wgsim::render::{Render, RenderTarget};
+use wgsim::util;
 use winit::dpi::PhysicalSize;
 
 pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
@@ -59,7 +63,7 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
   };
 
   let mut gif = Gif::<State>::new(1024, initial, true).await;
-  gif.export("export/with_gif-msaa-4.gif", 50, 1).await?;
+  gif.export("export/with_gif-msaa-5.gif", 50, 1).await?;
 
   Ok(())
 }
@@ -76,7 +80,7 @@ fn create_vertices() -> (Vec<Vertex>, Vec<u16>) {
     normals,
     indices,
     ..
-  } = vd::cube::create_cube_data(2.);
+  } = ge::create_cube_data(2.);
 
   let data = (0..positions.len())
     .map(|i| Vertex {
@@ -157,13 +161,13 @@ impl<'a> Render<'a> for State {
       .create_shader_module(wgpu::include_wgsl!("./shader-frag.wgsl"));
 
     let aspect = ctx.size.width as f32 / ctx.size.height as f32;
-    let view_mat = wt::create_view_mat(
+    let view_mat = matrix::create_view_mat(
       initial.camera_position,
       initial.look_direction,
       initial.up_direction,
     );
     let project_mat =
-      wt::create_perspective_mat(Rad(2. * PI / 5.), aspect, 1., 1000.);
+      matrix::create_perspective_mat(Rad(2. * PI / 5.), aspect, 1., 1000.);
 
     let matrix_uniform_buffer =
       ctx.device.create_buffer(&wgpu::BufferDescriptor {
@@ -211,45 +215,57 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
-    let (vert_bind_group_layout, vert_bind_group) =
-      ws::create_uniform_bind_group(
-        &ctx.device,
-        vec![wgpu::ShaderStages::VERTEX],
-        &[matrix_uniform_buffer.as_entire_binding()],
-      );
+    let vert_bind_group_layout = util::create_bind_group_layout(
+      &ctx.device,
+      &[wgpu::BufferBindingType::Uniform],
+      &[wgpu::ShaderStages::VERTEX],
+    );
+    let vert_bind_group = util::create_bind_group(
+      &ctx.device,
+      &vert_bind_group_layout,
+      &[matrix_uniform_buffer.as_entire_binding()],
+    );
 
-    let (frag_bind_group_layout, frag_bind_group) =
-      ws::create_uniform_bind_group(
-        &ctx.device,
-        vec![wgpu::ShaderStages::FRAGMENT, wgpu::ShaderStages::FRAGMENT],
-        &[
-          light_uniform_buffer.as_entire_binding(),
-          material_uniform_buffer.as_entire_binding(),
-        ],
-      );
+    let frag_bind_group_layout = util::create_bind_group_layout(
+      &ctx.device,
+      &[
+        wgpu::BufferBindingType::Uniform,
+        wgpu::BufferBindingType::Uniform,
+      ],
+      &[wgpu::ShaderStages::FRAGMENT, wgpu::ShaderStages::FRAGMENT],
+    );
+    let frag_bind_group = util::create_bind_group(
+      &ctx.device,
+      &frag_bind_group_layout,
+      &[
+        light_uniform_buffer.as_entire_binding(),
+        material_uniform_buffer.as_entire_binding(),
+      ],
+    );
 
-    let vertex_buffer_layout = wgpu::VertexBufferLayout {
+    let vertex_buffer_layout = [wgpu::VertexBufferLayout {
       array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
       step_mode: wgpu::VertexStepMode::Vertex,
       attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
-    };
+    }];
+
     let pipeline_layout =
       ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render Pipeline Layout"),
         bind_group_layouts: &[&vert_bind_group_layout, &frag_bind_group_layout],
         push_constant_ranges: &[],
       });
-    let mut render = ws::RenderSet {
-      vs_shader: Some(&vs_shader),
-      fs_shader: Some(&fs_shader),
-      pipeline_layout: Some(&pipeline_layout),
-      vertex_buffer_layout: &[vertex_buffer_layout],
-      ..Default::default()
-    };
-    let pipeline = render.new(&ctx);
 
-    let msaa_texture_view = ws::create_msaa_texture_view(&ctx);
-    let depth_texture_view = ws::create_depth_view(&ctx);
+    let pipeline_builder = RenderPipelineBuilder::new(&ctx)
+      .vs_shader(&vs_shader, "vs_main")
+      .fs_shader(&fs_shader, "fs_main")
+      .pipeline_layout(&pipeline_layout)
+      .vertex_buffer_layout(&vertex_buffer_layout);
+
+    let pipeline = pipeline_builder.build();
+
+    let msaa_texture_view = util::create_msaa_texture_view(&ctx);
+    let depth_texture_view = util::create_depth_view(&ctx);
 
     let vertex_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -280,11 +296,7 @@ impl<'a> Render<'a> for State {
     }
   }
 
-  fn resize(
-    &mut self,
-    ctx: &ws::WgpuContext<'_>,
-    size: Option<PhysicalSize<u32>>,
-  ) {
+  fn resize(&mut self, ctx: &WgpuContext<'_>, size: Option<PhysicalSize<u32>>) {
     let size = size.unwrap_or(ctx.size);
 
     if size.width > 0 && size.height > 0 {
@@ -292,22 +304,24 @@ impl<'a> Render<'a> for State {
         surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
       }
 
-      self.project_mat =
-        wt::create_projection_mat(size.width as f32 / size.height as f32, true);
+      self.project_mat = matrix::create_projection_mat(
+        size.width as f32 / size.height as f32,
+        true,
+      );
 
-      self.depth_texture_view = ws::create_depth_view(ctx);
+      self.depth_texture_view = util::create_depth_view(ctx);
 
       if ctx.sample_count > 1 {
-        self.msaa_texture_view = ws::create_msaa_texture_view(&ctx);
+        self.msaa_texture_view = util::create_msaa_texture_view(&ctx);
       }
     }
   }
 
-  fn update(&mut self, ctx: &ws::WgpuContext, dt: time::Duration) {
+  fn update(&mut self, ctx: &WgpuContext, dt: time::Duration) {
     let dt = self.rotation_speed * dt.as_secs_f32();
 
     let model_mat =
-      wt::create_model_mat_with_rotation([dt.sin(), dt.cos(), 0.]);
+      matrix::create_model_mat_with_rotation([dt.sin(), dt.cos(), 0.]);
     let view_proj_mat = self.project_mat * self.view_mat;
     let normal_mat = (model_mat.invert().unwrap()).transpose();
 
@@ -351,16 +365,16 @@ impl<'a> Render<'a> for State {
       }
     };
 
-    let color_attach = ws::create_color_attachment(&view);
+    let color_attach = util::create_color_attachment(&view);
     let msaa_attach =
-      ws::create_msaa_color_attachment(&view, &self.msaa_texture_view);
+      util::create_msaa_color_attachment(&view, &self.msaa_texture_view);
     let color_attachment = if sample_count == 1 {
       color_attach
     } else {
       msaa_attach
     };
     let depth_attachment =
-      ws::create_depth_stencil_attachment(&self.depth_texture_view);
+      util::create_depth_stencil_attachment(&self.depth_texture_view);
 
     let mut render_pass =
       encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
