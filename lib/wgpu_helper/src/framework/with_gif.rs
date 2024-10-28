@@ -12,11 +12,6 @@ use winit::{
 
 use crate::context::WgpuContext;
 
-pub struct DrawOutput<'a> {
-  pub surface_texture: Option<wgpu::SurfaceTexture>,
-  pub encoder: &'a wgpu::CommandEncoder,
-}
-
 pub enum RenderTarget<'a> {
   Surface(&'a wgpu::Surface<'a>),
   Texture(&'a wgpu::Texture),
