@@ -54,6 +54,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         instanced_cube_sphere_torus_direction_light_1::export_gif(),
       )?)
     }
+    "examples/empty_window" => Ok(empty_window::run()?),
     _ => {
       eprintln!("Not found: {}", target);
       Ok(())

@@ -22,6 +22,7 @@ cube_blinn_phong                              = { path = "./practice/cube_blinn_
 rotate_cube_basic                             = { path = "./practice/rotate_cube_basic" }
 instanced_cube_sphere_torus_base              = { path = "./instanced_cube_sphere_torus/base" }
 instanced_cube_sphere_torus_direction_light_1 = { path = "./instanced_cube_sphere_torus/direction_light_1" }
+empty_window                                  = { path = "./examples/empty_window" }
 pollster                                      = "0.3.0"
 
 [workspace]
@@ -47,4 +48,5 @@ members = [
   "practice/rotate_cube_basic",
   "instanced_cube_sphere_torus/base",
   "instanced_cube_sphere_torus/direction_light_1",
+  "examples/empty_window",
 ]
