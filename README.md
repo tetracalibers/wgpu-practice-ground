@@ -81,3 +81,11 @@ cargo run -- tutorial/compute_atomic_add
 ```bash
 cargo run -- instanced_cube_sphere_torus/base
 ```
+
+```bash
+cargo run -- instanced_cube_sphere_torus/direction_light_1
+```
+
+```bash
+cargo run -- export-gif:instanced_cube_sphere_torus/direction_light_1
+```
