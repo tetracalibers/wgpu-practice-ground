@@ -49,6 +49,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     "instanced_cube_sphere_torus/direction_light_1" => {
       Ok(instanced_cube_sphere_torus_direction_light_1::run()?)
     }
+    "examples/empty_window" => Ok(empty_window::run()?),
     _ => {
       eprintln!("Not found: {}", target);
       Ok(())

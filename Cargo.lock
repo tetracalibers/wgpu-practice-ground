@@ -802,6 +802,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
+name = "empty_window"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "winit",
+]
+
+[[package]]
 name = "enum-rotate"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3475,6 +3483,7 @@ dependencies = [
  "compute_atomic_add",
  "compute_single_thread",
  "cube_blinn_phong",
+ "empty_window",
  "hello-glyphon",
  "instanced_cube_sphere_torus_base",
  "instanced_cube_sphere_torus_direction_light_1",

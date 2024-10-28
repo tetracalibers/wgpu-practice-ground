@@ -85,3 +85,7 @@ cargo run -- instanced_cube_sphere_torus/base
 ```bash
 cargo run -- instanced_cube_sphere_torus/direction_light_1
 ```
+
+```bash
+cargo run -- examples/empty_window
+```
