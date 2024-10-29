@@ -57,7 +57,7 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
   let mut gif = Gif::<State>::new(1024, initial, true).await;
   gif
     .export(
-      "export/instanced-cube-sphere-torus_direction-light-ambient.gif",
+      "export/instanced-cube-sphere-torus_direction-light-diffuse-ambient.gif",
       50,
       30,
     )
