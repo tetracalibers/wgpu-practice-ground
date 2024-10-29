@@ -1351,6 +1351,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "instanced_cube_sphere_torus_direction_light_2"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cgmath",
+ "env_logger",
+ "pollster",
+ "rand",
+ "wgpu 22.1.0",
+ "wgsim",
+ "winit",
+]
+
+[[package]]
 name = "instant"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3546,6 +3560,7 @@ dependencies = [
  "hello-glyphon",
  "instanced_cube_sphere_torus_base",
  "instanced_cube_sphere_torus_direction_light_1",
+ "instanced_cube_sphere_torus_direction_light_2",
  "life-game",
  "pollster",
  "rect-renderer",
