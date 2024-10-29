@@ -42,7 +42,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
   let initial = setup(1.);
 
   let mut app: App<State> =
-    App::new("instanced_cube_sphere_torus - direction_light_1", initial)
+    App::new("instanced_cube_sphere_torus - direction_light_2", initial)
       .with_msaa();
   app.run()?;
 
@@ -57,7 +57,7 @@ pub async fn export_gif() -> Result<(), Box<dyn Error>> {
   let mut gif = Gif::<State>::new(1024, initial, true).await;
   gif
     .export(
-      "export/instanced-cube-sphere-torus_direction-light-diffuse-4.gif",
+      "export/instanced-cube-sphere-torus_direction-light-ambient.gif",
       50,
       30,
     )
