@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use indicatif::{ProgressBar, ProgressStyle};
+
 use crate::{
   ctx::WgpuContext,
   render::{Render, RenderTarget},
@@ -67,6 +69,15 @@ where
     scene_count: usize,
     speed: i32,
   ) -> Result<(), Box<dyn Error>> {
+    let progress = ProgressBar::new(scene_count as u64);
+    progress.set_style(
+      ProgressStyle::with_template(
+        "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+      )
+      .unwrap()
+      .progress_chars("##-"),
+    );
+
     let texture_desc = wgpu::TextureDescriptor {
       size: wgpu::Extent3d {
         width: self.size,
@@ -159,9 +170,15 @@ where
         }
         _ => eprintln!("Something went wrong"),
       }
+
+      progress.inc(1);
     }
 
+    progress.finish_with_message("All scenes have been rendered 🎉");
+
     self.save_gif(file_path, &mut frames, speed, self.size as u16)?;
+
+    println!("Gif has been saved to {}", file_path);
 
     Ok(())
   }
