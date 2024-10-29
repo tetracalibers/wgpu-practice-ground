@@ -31,6 +31,7 @@ fn setup(animation_speed: f32) -> Initial {
       direction: Point3::new(0.2, 1., 0.3).into(),
       color: Point3::new(1., 1., 1.).into(),
     },
+    ambient: 0.2,
 
     animation_speed,
   }
@@ -72,6 +73,7 @@ struct Initial {
   pub up_direction: Vector3<f32>,
 
   pub light: DirectionLight,
+  pub ambient: f32,
 
   pub animation_speed: f32,
 }
@@ -182,6 +184,13 @@ impl<'a> Render<'a> for State {
       cast_slice(&initial.light.color),
     );
 
+    let ambient_uniform_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Ambient Uniform Buffer"),
+        contents: cast_slice(&[initial.ambient]),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+      });
+
     //
     // uniform bind group for vertex shader
     //
@@ -219,14 +228,20 @@ impl<'a> Render<'a> for State {
 
     let frag_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
-      &[wgpu::BufferBindingType::Uniform],
-      &[wgpu::ShaderStages::FRAGMENT],
+      &[
+        wgpu::BufferBindingType::Uniform,
+        wgpu::BufferBindingType::Uniform,
+      ],
+      &[wgpu::ShaderStages::FRAGMENT, wgpu::ShaderStages::FRAGMENT],
     );
 
     let frag_bind_group = util::create_bind_group(
       &ctx.device,
       &frag_bind_group_layout,
-      &[light_uniform_buffer.as_entire_binding()],
+      &[
+        light_uniform_buffer.as_entire_binding(),
+        ambient_uniform_buffer.as_entire_binding(),
+      ],
     );
 
     //
