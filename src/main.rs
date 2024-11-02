@@ -54,6 +54,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         instanced_cube_sphere_torus_direction_light_1::export_gif(),
       )?)
     }
+    "instanced_cube_sphere_torus/direction_light_2" => {
+      Ok(instanced_cube_sphere_torus_direction_light_2::run()?)
+    }
+    "export-gif:instanced_cube_sphere_torus/direction_light_2" => {
+      Ok(pollster::block_on(
+        instanced_cube_sphere_torus_direction_light_2::export_gif(),
+      )?)
+    }
     "examples/empty_window" => Ok(empty_window::run()?),
     _ => {
       eprintln!("Not found: {}", target);
