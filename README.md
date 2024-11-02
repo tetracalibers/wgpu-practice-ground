@@ -79,6 +79,14 @@ cargo run -- tutorial/compute_atomic_add
 ```
 
 ```bash
+cargo run -- tutorial/compute_visualize_workgroup_global
+```
+
+```bash
+cargo run -- tutorial/compute_visualize_workgroup_local
+```
+
+```bash
 cargo run -- instanced_cube_sphere_torus/base
 ```
 

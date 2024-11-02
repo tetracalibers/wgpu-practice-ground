@@ -215,7 +215,7 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
-    let vert_bind_group_layout = util::create_bind_group_layout(
+    let vert_bind_group_layout = util::create_bind_group_layout_for_buffer(
       &ctx.device,
       &[wgpu::BufferBindingType::Uniform],
       &[wgpu::ShaderStages::VERTEX],
@@ -226,7 +226,7 @@ impl<'a> Render<'a> for State {
       &[matrix_uniform_buffer.as_entire_binding()],
     );
 
-    let frag_bind_group_layout = util::create_bind_group_layout(
+    let frag_bind_group_layout = util::create_bind_group_layout_for_buffer(
       &ctx.device,
       &[
         wgpu::BufferBindingType::Uniform,
