@@ -123,7 +123,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 
   compute_pass_encoder.set_pipeline(&compute_pipeline);
   compute_pass_encoder.set_bind_group(0, &bind_group, &[]);
-  compute_pass_encoder.dispatch_workgroups(16, 16, 1);
+  compute_pass_encoder.dispatch_workgroups(IMG_SIZE / 8, IMG_SIZE / 8, 1);
 
   drop(compute_pass_encoder);
 
