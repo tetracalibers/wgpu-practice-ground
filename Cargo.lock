@@ -612,6 +612,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "compute_visualize_workgroup_local"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "futures-intrusive",
+ "png",
+ "wgpu 22.1.0",
+ "wgsim",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3583,6 +3595,7 @@ dependencies = [
  "compute_atomic_add",
  "compute_single_thread",
  "compute_visualize_workgroup_global",
+ "compute_visualize_workgroup_local",
  "cube_blinn_phong",
  "empty_window",
  "hello-glyphon",

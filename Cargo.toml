@@ -15,6 +15,7 @@ hello-glyphon                                 = { path = "./tutorial/hello-glyph
 compute_single_thread                         = { path = "./tutorial/compute_single_thread" }
 compute_atomic_add                            = { path = "./tutorial/compute_atomic_add" }
 compute_visualize_workgroup_global            = { path = "./tutorial/compute_visualize_workgroup_global" }
+compute_visualize_workgroup_local             = { path = "./tutorial/compute_visualize_workgroup_local" }
 rect-renderer                                 = { path = "./prototype/rect-renderer" }
 text-renderer                                 = { path = "./prototype/text-renderer" }
 with_gif                                      = { path = "./prototype/with_gif" }
@@ -48,6 +49,7 @@ members = [
   "tutorial/compute_single_thread",
   "tutorial/compute_atomic_add",
   "tutorial/compute_visualize_workgroup_global",
+  "tutorial/compute_visualize_workgroup_local",
   "practice/cube_blinn_phong",
   "practice/rotate_cube_basic",
   "instanced_cube_sphere_torus/base",
