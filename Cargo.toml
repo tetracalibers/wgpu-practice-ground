@@ -14,6 +14,7 @@ life-game                                     = { path = "./tutorial/life-game" 
 hello-glyphon                                 = { path = "./tutorial/hello-glyphon" }
 compute_single_thread                         = { path = "./tutorial/compute_single_thread" }
 compute_atomic_add                            = { path = "./tutorial/compute_atomic_add" }
+compute_texture_grid                          = { path = "./tutorial/compute_texture_grid" }
 rect-renderer                                 = { path = "./prototype/rect-renderer" }
 text-renderer                                 = { path = "./prototype/text-renderer" }
 with_gif                                      = { path = "./prototype/with_gif" }
@@ -46,6 +47,7 @@ members = [
   "tutorial/life-game",
   "tutorial/compute_single_thread",
   "tutorial/compute_atomic_add",
+  "tutorial/compute_texture_grid",
   "practice/cube_blinn_phong",
   "practice/rotate_cube_basic",
   "instanced_cube_sphere_torus/base",

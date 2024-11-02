@@ -594,6 +594,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "compute_texture_grid"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "futures-intrusive",
+ "num-traits",
+ "wgpu 22.1.0",
+ "wgsim",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3555,6 +3567,7 @@ dependencies = [
  "ch06-texture",
  "compute_atomic_add",
  "compute_single_thread",
+ "compute_texture_grid",
  "cube_blinn_phong",
  "empty_window",
  "hello-glyphon",

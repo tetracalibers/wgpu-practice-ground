@@ -79,6 +79,10 @@ cargo run -- tutorial/compute_atomic_add
 ```
 
 ```bash
+cargo run -- tutorial/compute_texture_grid
+```
+
+```bash
 cargo run -- instanced_cube_sphere_torus/base
 ```
 
