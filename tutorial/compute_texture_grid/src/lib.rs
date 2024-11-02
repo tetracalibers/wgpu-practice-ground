@@ -1,7 +1,5 @@
-use std::{error::Error, iter};
+use std::{error::Error, fs::File, io::BufWriter, iter, path::Path};
 
-use num_traits::FromBytes;
-use wgpu::util::DeviceExt;
 use wgsim::util;
 
 pub async fn run() -> Result<(), Box<dyn Error>> {
@@ -11,8 +9,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // define constants
   //
 
-  // std::mem::size_of::<i32>()で求められるが、ハードコーディングしてしまう
-  let buffer_size = 4;
+  const IMG_SIZE: u32 = 128;
 
   //
   // init wgpu
@@ -25,10 +22,8 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     .await
     .unwrap();
 
-  let (device, queue) = adapter
-    .request_device(&wgpu::DeviceDescriptor::default(), None)
-    .await
-    .unwrap();
+  let (device, queue) =
+    adapter.request_device(&wgpu::DeviceDescriptor::default(), None).await?;
 
   //
   // compile shader
@@ -38,33 +33,37 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     device.create_shader_module(wgpu::include_wgsl!("./compute.wgsl"));
 
   //
-  // create a buffer to store data
+  // texture
   //
 
-  let input_data_buffer =
-    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-      label: Some("Storage Buffer for input data"),
-      contents: bytemuck::cast_slice(&[4, 5, 6]),
-      usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-    });
+  let texture = device.create_texture(&wgpu::TextureDescriptor {
+    label: Some("output grid texture"),
+    size: wgpu::Extent3d {
+      width: IMG_SIZE,
+      height: IMG_SIZE,
+      depth_or_array_layers: 1,
+    },
+    mip_level_count: 1,
+    sample_count: 1,
+    dimension: wgpu::TextureDimension::D2,
+    format: wgpu::TextureFormat::Rgba8Unorm,
+    usage: wgpu::TextureUsages::COPY_DST
+      | wgpu::TextureUsages::COPY_SRC
+      | wgpu::TextureUsages::TEXTURE_BINDING
+      | wgpu::TextureUsages::STORAGE_BINDING,
+    view_formats: &[],
+  });
 
-  let non_atomic_result_data_buffer =
-    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-      label: Some("Storage Buffer for result data (non atomic)"),
-      contents: bytemuck::cast_slice(&[0, 0, 0]),
-      usage: wgpu::BufferUsages::STORAGE
-        | wgpu::BufferUsages::COPY_DST
-        | wgpu::BufferUsages::COPY_SRC,
-    });
+  //
+  // staging buffer
+  //
 
-  let atomic_result_data_buffer =
-    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-      label: Some("Storage Buffer for result data (atomic)"),
-      contents: bytemuck::cast_slice(&[0, 0, 0]),
-      usage: wgpu::BufferUsages::STORAGE
-        | wgpu::BufferUsages::COPY_DST
-        | wgpu::BufferUsages::COPY_SRC,
-    });
+  let texture_data_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+    label: Some("staging buffer for texture data"),
+    size: 4 * IMG_SIZE as u64 * IMG_SIZE as u64,
+    usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+    mapped_at_creation: false,
+  });
 
   //
   // create bind_group
@@ -72,26 +71,20 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 
   let bind_group_layout = util::create_bind_group_layout(
     &device,
-    &[
-      wgpu::BufferBindingType::Storage { read_only: true }, // input
-      wgpu::BufferBindingType::Storage { read_only: false }, // result (non atomic)
-      wgpu::BufferBindingType::Storage { read_only: false }, // result (atomic)
-    ],
-    &[
-      wgpu::ShaderStages::COMPUTE,
-      wgpu::ShaderStages::COMPUTE,
-      wgpu::ShaderStages::COMPUTE,
-    ],
+    &[wgpu::BindingType::StorageTexture {
+      access: wgpu::StorageTextureAccess::WriteOnly,
+      format: wgpu::TextureFormat::Rgba8Unorm,
+      view_dimension: wgpu::TextureViewDimension::D2,
+    }],
+    &[wgpu::ShaderStages::COMPUTE],
   );
 
   let bind_group = util::create_bind_group(
     &device,
     &bind_group_layout,
-    &[
-      input_data_buffer.as_entire_binding(),
-      non_atomic_result_data_buffer.as_entire_binding(),
-      atomic_result_data_buffer.as_entire_binding(),
-    ],
+    &[wgpu::BindingResource::TextureView(
+      &texture.create_view(&wgpu::TextureViewDescriptor::default()),
+    )],
   );
 
   //
@@ -116,15 +109,11 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     });
 
   //
-  // create command encode
+  // commands submission
   //
 
   let mut command_encoder = device
     .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
-  //
-  // encode compute pass
-  //
 
   let mut compute_pass_encoder =
     command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -134,102 +123,77 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 
   compute_pass_encoder.set_pipeline(&compute_pipeline);
   compute_pass_encoder.set_bind_group(0, &bind_group, &[]);
-  // シェーダーのローカルワークグループは `8`に設定されているため、必要なのは 1つのワークグループだけ
-  compute_pass_encoder.dispatch_workgroups(1, 1, 1);
+  compute_pass_encoder.dispatch_workgroups(16, 16, 1);
 
   drop(compute_pass_encoder);
 
   //
-  // execute commands
+  // copy texture to buffer
   //
 
-  queue.submit(iter::once(command_encoder.finish()));
-
-  //
-  // result
-  //
-
-  let non_atomic_result_data: Vec<i32> = get_gpu_buffer(
-    &device,
-    &queue,
-    &non_atomic_result_data_buffer,
-    buffer_size,
-  )
-  .await;
-
-  let atomic_result_data: Vec<i32> =
-    get_gpu_buffer(&device, &queue, &atomic_result_data_buffer, buffer_size)
-      .await;
-
-  // アトミックロックを使用した場合は正しい結果が得られる
-  // アトミックロックを使用しない場合は誤った結果が出る可能性がある（まれに正しい結果が得られることもあるが、多くの場合は失敗する）
-  println!("  no atomic array contents: {:?}", non_atomic_result_data);
-  println!("with atomic array contents: {:?}", atomic_result_data);
-
-  Ok(())
-}
-
-async fn get_gpu_buffer<T>(
-  device: &wgpu::Device,
-  queue: &wgpu::Queue,
-  src_buffer: &wgpu::Buffer,
-  buffer_size: u64,
-) -> Vec<T>
-where
-  T: FromBytes<Bytes = [u8; 4]>,
-{
-  let tmp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-    label: Some("tmp_buffer"),
-    size: buffer_size,
-    usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-    mapped_at_creation: false,
-  });
-
-  let mut command_encoder =
-    device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-      label: Some("command_encoder for tmp"),
-    });
-
-  //
-  // Encode commands for copying buffer to buffer
-  //
-
-  command_encoder.copy_buffer_to_buffer(
-    &src_buffer,
-    0,
-    &tmp_buffer,
-    0,
-    buffer_size,
+  command_encoder.copy_texture_to_buffer(
+    wgpu::ImageCopyTexture {
+      texture: &texture,
+      mip_level: 0,
+      origin: wgpu::Origin3d::ZERO,
+      aspect: wgpu::TextureAspect::All,
+    },
+    wgpu::ImageCopyBuffer {
+      buffer: &texture_data_buffer,
+      layout: wgpu::ImageDataLayout {
+        offset: 0,
+        bytes_per_row: Some(4 * IMG_SIZE),
+        rows_per_image: Some(IMG_SIZE),
+      },
+    },
+    wgpu::Extent3d {
+      width: IMG_SIZE,
+      height: IMG_SIZE,
+      depth_or_array_layers: 1,
+    },
   );
 
   //
-  // Submit GPU commands
+  // submit GPU commands
   //
 
   queue.submit(iter::once(command_encoder.finish()));
 
   //
-  // Read buffer
+  // read buffer
   //
 
-  let buffer_slice = tmp_buffer.slice(..);
+  let buffer_slice = texture_data_buffer.slice(..);
 
   let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
   buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
     tx.send(result).unwrap();
   });
   device.poll(wgpu::Maintain::Wait);
-  rx.receive().await.unwrap().unwrap();
+  rx.receive().await.unwrap()?;
 
-  let data_view = buffer_slice.get_mapped_range();
+  let px_data = buffer_slice.get_mapped_range();
 
-  let data = data_view
-    .chunks_exact(buffer_size as usize)
-    .map(|b| FromBytes::from_ne_bytes(&b.try_into().unwrap()))
-    .collect::<Vec<T>>();
+  //
+  // create png
+  //
 
-  drop(data_view);
-  tmp_buffer.unmap();
+  let path = Path::new("export/compute_texture_grid.png");
+  let file = File::create(path)?;
+  let ref mut w = BufWriter::new(file);
 
-  data
+  let mut png_encoder = png::Encoder::new(w, IMG_SIZE, IMG_SIZE);
+  png_encoder.set_color(png::ColorType::Rgba);
+
+  let mut writer = png_encoder.write_header()?;
+  writer.write_image_data(&px_data)?;
+
+  //
+  // clean up
+  //
+
+  drop(px_data);
+  texture_data_buffer.unmap();
+
+  Ok(())
 }
