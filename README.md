@@ -79,7 +79,7 @@ cargo run -- tutorial/compute_atomic_add
 ```
 
 ```bash
-cargo run -- tutorial/compute_texture_grid
+cargo run -- tutorial/compute_visualize_workgroup_global
 ```
 
 ```bash

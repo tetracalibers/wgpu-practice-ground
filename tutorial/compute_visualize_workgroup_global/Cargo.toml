@@ -1,5 +1,5 @@
 [package]
-name    = "compute_texture_grid"
+name    = "compute_visualize_workgroup_global"
 version = "0.1.0"
 edition = "2021"
 

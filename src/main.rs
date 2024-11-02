@@ -29,9 +29,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     "tutorial/compute_atomic_add" => {
       Ok(pollster::block_on(compute_atomic_add::run())?)
     }
-    "tutorial/compute_texture_grid" => {
-      Ok(pollster::block_on(compute_texture_grid::run())?)
-    }
+    "tutorial/compute_visualize_workgroup_global" => Ok(pollster::block_on(
+      compute_visualize_workgroup_global::run(),
+    )?),
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
     "prototype/with_gif" => Ok(with_gif::run("with_gif")?),

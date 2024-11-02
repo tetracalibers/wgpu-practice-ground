@@ -600,7 +600,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "compute_texture_grid"
+name = "compute_visualize_workgroup_global"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
@@ -3582,7 +3582,7 @@ dependencies = [
  "ch06-texture",
  "compute_atomic_add",
  "compute_single_thread",
- "compute_texture_grid",
+ "compute_visualize_workgroup_global",
  "cube_blinn_phong",
  "empty_window",
  "hello-glyphon",

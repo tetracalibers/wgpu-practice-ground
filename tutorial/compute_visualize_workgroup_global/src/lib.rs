@@ -178,7 +178,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // create png
   //
 
-  let path = Path::new("export/compute_texture_grid.png");
+  let path = Path::new("export/compute_visualize_workgroup_global.png");
   let file = File::create(path)?;
   let ref mut w = BufWriter::new(file);
 
