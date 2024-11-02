@@ -10,7 +10,7 @@ struct Input {
 @compute @workgroup_size(8, 8)
 fn cs_main(in: Input) {
   let position = vec2i(in.global_id.xy);
-  let color = vec4f(vec3f(in.workgroup_id) / vec3f(in.workgroup_size), 1.0);
+  let color = vec4f(vec3f(in.local_id) / vec3f(8.0), 1.0);
 
   textureStore(output_texture, position, color);
 }
