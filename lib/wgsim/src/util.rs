@@ -1,6 +1,6 @@
 use crate::ctx::WgpuContext;
 
-pub fn create_bind_group_layout(
+pub fn create_bind_group_layout_for_buffer(
   device: &wgpu::Device,
   binding_types: &[wgpu::BufferBindingType],
   shader_stages: &[wgpu::ShaderStages],
@@ -14,6 +14,26 @@ pub fn create_bind_group_layout(
         has_dynamic_offset: false,
         min_binding_size: None,
       },
+      count: None,
+    }
+  });
+
+  device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    label: Some("Bind Group Layout"),
+    entries: entries.collect::<Vec<_>>().as_slice(),
+  })
+}
+
+pub fn create_bind_group_layout(
+  device: &wgpu::Device,
+  binding_types: &[wgpu::BindingType],
+  shader_stages: &[wgpu::ShaderStages],
+) -> wgpu::BindGroupLayout {
+  let entries = shader_stages.iter().enumerate().map(|(i, stage)| {
+    wgpu::BindGroupLayoutEntry {
+      binding: i as u32,
+      visibility: *stage,
+      ty: binding_types[i],
       count: None,
     }
   });

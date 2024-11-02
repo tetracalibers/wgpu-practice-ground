@@ -129,7 +129,7 @@ impl<'a> Render<'a> for State {
     // uniform bind group for vertex shader
     //
 
-    let vert_bind_group_layout = util::create_bind_group_layout(
+    let vert_bind_group_layout = util::create_bind_group_layout_for_buffer(
       &ctx.device,
       &[
         wgpu::BufferBindingType::Uniform,
