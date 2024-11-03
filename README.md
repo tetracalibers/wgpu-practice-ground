@@ -87,6 +87,10 @@ cargo run -- tutorial/compute_visualize_workgroup_local
 ```
 
 ```bash
+cargo run -- tutorial/compute_mandelbrot_set
+```
+
+```bash
 cargo run -- instanced_cube_sphere_torus/base
 ```
 
