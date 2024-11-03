@@ -593,10 +593,7 @@ dependencies = [
 name = "compute_mandelbrot_set"
 version = "0.1.0"
 dependencies = [
- "bytemuck",
  "env_logger",
- "futures-intrusive",
- "png",
  "wgpu 22.1.0",
  "wgsim",
 ]
@@ -615,10 +612,7 @@ dependencies = [
 name = "compute_visualize_workgroup_global"
 version = "0.1.0"
 dependencies = [
- "bytemuck",
  "env_logger",
- "futures-intrusive",
- "png",
  "wgpu 22.1.0",
  "wgsim",
 ]
@@ -627,10 +621,7 @@ dependencies = [
 name = "compute_visualize_workgroup_local"
 version = "0.1.0"
 dependencies = [
- "bytemuck",
  "env_logger",
- "futures-intrusive",
- "png",
  "wgpu 22.1.0",
  "wgsim",
 ]
@@ -3668,6 +3659,7 @@ dependencies = [
  "futures-intrusive",
  "gif",
  "indicatif",
+ "png",
  "pollster",
  "wgpu 22.1.0",
  "winit",

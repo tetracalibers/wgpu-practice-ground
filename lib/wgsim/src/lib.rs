@@ -1,4 +1,5 @@
 pub mod app;
+pub mod compute;
 pub mod ctx;
 pub mod export;
 pub mod geometry;
