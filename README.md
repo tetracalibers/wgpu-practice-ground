@@ -91,6 +91,10 @@ cargo run -- tutorial/compute_mandelbrot_set
 ```
 
 ```bash
+cargo run -- shader_art/shader_step_rect
+```
+
+```bash
 cargo run -- instanced_cube_sphere_torus/base
 ```
 

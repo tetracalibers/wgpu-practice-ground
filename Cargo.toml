@@ -17,6 +17,7 @@ compute_atomic_add                            = { path = "./tutorial/compute_ato
 compute_visualize_workgroup_global            = { path = "./tutorial/compute_visualize_workgroup_global" }
 compute_visualize_workgroup_local             = { path = "./tutorial/compute_visualize_workgroup_local" }
 compute_mandelbrot_set                        = { path = "./tutorial/compute_mandelbrot_set" }
+shader_step_rect                              = { path = "./shader_art/shader_step_rect" }
 rect-renderer                                 = { path = "./prototype/rect-renderer" }
 text-renderer                                 = { path = "./prototype/text-renderer" }
 with_gif                                      = { path = "./prototype/with_gif" }
@@ -52,6 +53,7 @@ members = [
   "tutorial/compute_visualize_workgroup_global",
   "tutorial/compute_visualize_workgroup_local",
   "tutorial/compute_mandelbrot_set",
+  "shader_art/shader_step_rect",
   "practice/cube_blinn_phong",
   "practice/rotate_cube_basic",
   "instanced_cube_sphere_torus/base",
