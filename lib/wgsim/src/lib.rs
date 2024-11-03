@@ -5,4 +5,5 @@ pub mod geometry;
 pub mod matrix;
 pub mod ppl;
 pub mod render;
+pub mod surface_cfg;
 pub mod util;

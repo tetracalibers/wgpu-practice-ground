@@ -1,4 +1,4 @@
-use crate::ctx::WgpuContext;
+use crate::ctx::DrawingContext;
 
 pub fn create_bind_group_layout_for_buffer(
   device: &wgpu::Device,
@@ -75,18 +75,20 @@ pub fn create_color_attachment(
   }
 }
 
-pub fn create_msaa_texture_view(init: &WgpuContext) -> wgpu::TextureView {
+pub fn create_msaa_texture_view(init: &DrawingContext) -> wgpu::TextureView {
+  let size = init.size();
+
   let msaa_texture = init.device.create_texture(&wgpu::TextureDescriptor {
     label: None,
     size: wgpu::Extent3d {
-      width: init.size.width,
-      height: init.size.height,
+      width: size.width,
+      height: size.height,
       depth_or_array_layers: 1,
     },
     mip_level_count: 1,
     sample_count: init.sample_count,
     dimension: wgpu::TextureDimension::D2,
-    format: init.format,
+    format: init.format(),
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
     view_formats: &[],
   });
@@ -108,12 +110,14 @@ pub fn create_msaa_color_attachment<'a>(
   }
 }
 
-pub fn create_depth_view(init: &WgpuContext) -> wgpu::TextureView {
+pub fn create_depth_view(init: &DrawingContext) -> wgpu::TextureView {
+  let size = init.size();
+
   let depth_texture = init.device.create_texture(&wgpu::TextureDescriptor {
     label: None,
     size: wgpu::Extent3d {
-      width: init.size.width,
-      height: init.size.height,
+      width: size.width,
+      height: size.height,
       depth_or_array_layers: 1,
     },
     mip_level_count: 1,

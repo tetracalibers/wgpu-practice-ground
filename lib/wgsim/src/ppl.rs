@@ -1,7 +1,7 @@
-use crate::ctx::WgpuContext;
+use crate::ctx::DrawingContext;
 
 pub struct RenderPipelineBuilder<'a> {
-  ctx: &'a WgpuContext<'a>,
+  ctx: &'a DrawingContext<'a>,
   pipeline_layout: Option<&'a wgpu::PipelineLayout>,
 
   depth_stencil: Option<wgpu::DepthStencilState>,
@@ -18,7 +18,7 @@ pub struct RenderPipelineBuilder<'a> {
 }
 
 impl<'a> RenderPipelineBuilder<'a> {
-  pub fn new(ctx: &'a WgpuContext) -> Self {
+  pub fn new(ctx: &'a DrawingContext) -> Self {
     Self {
       ctx,
       depth_stencil: None,
@@ -28,7 +28,7 @@ impl<'a> RenderPipelineBuilder<'a> {
       fs_shader: None,
       fs_entry: "fs_main",
       vertex_buffer_layout: &[],
-      targets: vec![Some(ctx.format.into())],
+      targets: vec![Some(ctx.format().into())],
       primitive: wgpu::PrimitiveState::default(),
     }
   }
