@@ -9,7 +9,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // define constants
   //
 
-  const IMG_SIZE: u32 = 128;
+  const IMG_SIZE: u32 = 512;
 
   //
   // init wgpu
@@ -37,7 +37,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   //
 
   let texture = device.create_texture(&wgpu::TextureDescriptor {
-    label: Some("output grid texture"),
+    label: Some("compute output texture"),
     size: wgpu::Extent3d {
       width: IMG_SIZE,
       height: IMG_SIZE,
@@ -178,7 +178,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // create png
   //
 
-  let path = Path::new("export/compute_visualize_workgroup_local.png");
+  let path = Path::new("export/compute_mandelbrot_set.png");
   let file = File::create(path)?;
   let ref mut w = BufWriter::new(file);
 
