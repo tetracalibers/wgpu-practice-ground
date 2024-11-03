@@ -7,12 +7,11 @@ use cgmath::{Matrix4, Point3, Vector3};
 use instance_defs::{Matrices, Shapes, Vertex};
 use wgpu::util::DeviceExt;
 use wgsim::app::App;
-use wgsim::ctx::WgpuContext;
+use wgsim::ctx::{DrawingContext, Size};
 use wgsim::matrix;
 use wgsim::ppl::RenderPipelineBuilder;
 use wgsim::render::{Render, RenderTarget};
 use wgsim::util;
-use winit::dpi::PhysicalSize;
 
 const NUM_CUBES: u32 = 50;
 const NUM_SPHERES: u32 = 50;
@@ -60,7 +59,7 @@ struct State {
 impl<'a> Render<'a> for State {
   type Initial = Initial;
 
-  async fn new(ctx: &WgpuContext<'a>, initial: &Self::Initial) -> Self {
+  async fn new(ctx: &DrawingContext<'a>, initial: &Self::Initial) -> Self {
     //
     // shader
     //
@@ -77,7 +76,7 @@ impl<'a> Render<'a> for State {
     //
 
     let objects_count = NUM_CUBES + NUM_SPHERES + NUM_TORI;
-    let aspect = ctx.size.width as f32 / ctx.size.height as f32;
+    let aspect = ctx.aspect_ratio();
 
     let Matrices {
       model_mat,
@@ -204,13 +203,9 @@ impl<'a> Render<'a> for State {
     }
   }
 
-  fn resize(&mut self, ctx: &WgpuContext<'_>, size: Option<PhysicalSize<u32>>) {
-    let size = size.unwrap_or(ctx.size);
-
+  fn resize(&mut self, ctx: &mut DrawingContext<'_>, size: Size) {
     if size.width > 0 && size.height > 0 {
-      if let Some(surface) = &ctx.surface {
-        surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
-      }
+      ctx.resize(size.into());
 
       self.project_mat = matrix::create_projection_mat(
         size.width as f32 / size.height as f32,

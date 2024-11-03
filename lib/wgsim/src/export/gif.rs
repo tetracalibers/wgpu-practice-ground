@@ -3,7 +3,7 @@ use std::error::Error;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::{
-  ctx::WgpuContext,
+  ctx::{DrawingContext, Size},
   render::{Render, RenderTarget},
 };
 
@@ -14,7 +14,7 @@ where
   renderer: R,
   size: u32,
   sample_count: u32,
-  ctx: WgpuContext<'a>,
+  ctx: DrawingContext<'a>,
 }
 
 impl<'a, R> Gif<'a, R>
@@ -24,13 +24,12 @@ where
   pub async fn new(size: u32, initial: R::Initial, msaa: bool) -> Self {
     let sample_count = if msaa { 4 } else { 1 };
 
-    let ctx = WgpuContext::new_without_surface(
-      size,
-      size,
+    let ctx = DrawingContext::new_for_texture(
+      Size::new(size, size),
       wgpu::TextureFormat::Rgba8UnormSrgb,
-      sample_count,
     )
-    .await;
+    .await
+    .with_sample_count(sample_count);
 
     let renderer = R::new(&ctx, &initial).await;
 
@@ -87,7 +86,7 @@ where
       mip_level_count: 1,
       sample_count: 1, // コピー先のテクスチャでは 1 でよい
       dimension: wgpu::TextureDimension::D2,
-      format: self.ctx.format,
+      format: self.ctx.format(),
       usage: wgpu::TextureUsages::COPY_SRC
         | wgpu::TextureUsages::RENDER_ATTACHMENT,
       label: None,

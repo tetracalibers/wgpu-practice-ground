@@ -1,8 +1,8 @@
 use std::future::Future;
 
-use winit::{dpi::PhysicalSize, event::WindowEvent};
+use winit::event::WindowEvent;
 
-use crate::ctx::WgpuContext;
+use crate::ctx::{DrawingContext, Size};
 
 pub enum RenderTarget<'a> {
   Surface(&'a wgpu::Surface<'a>),
@@ -14,22 +14,18 @@ pub trait Render<'a> {
   type Initial;
 
   fn new(
-    ctx: &WgpuContext<'a>,
+    ctx: &DrawingContext<'a>,
     initial: &Self::Initial,
   ) -> impl Future<Output = Self>;
-  fn resize(&mut self, ctx: &WgpuContext, size: Option<PhysicalSize<u32>>) {
-    let size = size.unwrap_or(ctx.size);
-
+  fn resize(&mut self, ctx: &mut DrawingContext, size: Size) {
     if size.width > 0 && size.height > 0 {
-      if let Some(surface) = &ctx.surface {
-        surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
-      }
+      ctx.resize(size);
     }
   }
   fn process_event(&mut self, event: &WindowEvent) -> bool {
     false
   }
-  fn update(&mut self, ctx: &WgpuContext, dt: std::time::Duration) {}
+  fn update(&mut self, ctx: &DrawingContext, dt: std::time::Duration) {}
   fn draw(
     &mut self,
     encoder: &mut wgpu::CommandEncoder,

@@ -6,7 +6,7 @@ use bytemuck::{Pod, Zeroable};
 use cgmath::*;
 use wgpu::util::DeviceExt;
 use wgsim::app::App;
-use wgsim::ctx::WgpuContext;
+use wgsim::ctx::{DrawingContext, Size};
 use wgsim::export::Gif;
 use wgsim::geometry::generator as ge;
 use wgsim::geometry::Cube;
@@ -14,7 +14,6 @@ use wgsim::matrix;
 use wgsim::ppl::RenderPipelineBuilder;
 use wgsim::render::{Render, RenderTarget};
 use wgsim::util;
-use winit::dpi::PhysicalSize;
 
 pub fn run(title: &str) -> Result<(), Box<dyn Error>> {
   env_logger::init();
@@ -152,7 +151,7 @@ struct State {
 impl<'a> Render<'a> for State {
   type Initial = Initial;
 
-  async fn new(ctx: &WgpuContext<'a>, initial: &Initial) -> Self {
+  async fn new(ctx: &DrawingContext<'a>, initial: &Initial) -> Self {
     let vs_shader = ctx
       .device
       .create_shader_module(wgpu::include_wgsl!("./shader-vert.wgsl"));
@@ -160,7 +159,7 @@ impl<'a> Render<'a> for State {
       .device
       .create_shader_module(wgpu::include_wgsl!("./shader-frag.wgsl"));
 
-    let aspect = ctx.size.width as f32 / ctx.size.height as f32;
+    let aspect = ctx.aspect_ratio();
     let view_mat = matrix::create_view_mat(
       initial.camera_position,
       initial.look_direction,
@@ -296,13 +295,9 @@ impl<'a> Render<'a> for State {
     }
   }
 
-  fn resize(&mut self, ctx: &WgpuContext<'_>, size: Option<PhysicalSize<u32>>) {
-    let size = size.unwrap_or(ctx.size);
-
+  fn resize(&mut self, ctx: &mut DrawingContext<'_>, size: Size) {
     if size.width > 0 && size.height > 0 {
-      if let Some(surface) = &ctx.surface {
-        surface.configure(&ctx.device, &ctx.config.as_ref().unwrap());
-      }
+      ctx.resize(size.into());
 
       self.project_mat = matrix::create_projection_mat(
         size.width as f32 / size.height as f32,
@@ -317,7 +312,7 @@ impl<'a> Render<'a> for State {
     }
   }
 
-  fn update(&mut self, ctx: &WgpuContext, dt: time::Duration) {
+  fn update(&mut self, ctx: &DrawingContext, dt: time::Duration) {
     let dt = self.rotation_speed * dt.as_secs_f32();
 
     let model_mat =

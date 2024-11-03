@@ -1361,7 +1361,6 @@ dependencies = [
  "rand",
  "wgpu 22.1.0",
  "wgsim",
- "winit",
 ]
 
 [[package]]
@@ -1377,7 +1376,6 @@ dependencies = [
  "rand",
  "wgpu 22.1.0",
  "wgsim",
- "winit",
 ]
 
 [[package]]
@@ -1391,7 +1389,6 @@ dependencies = [
  "rand",
  "wgpu 22.1.0",
  "wgsim",
- "winit",
 ]
 
 [[package]]
@@ -4007,7 +4004,6 @@ dependencies = [
  "rand",
  "wgpu 22.1.0",
  "wgsim",
- "winit",
 ]
 
 [[package]]

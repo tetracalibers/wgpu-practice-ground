@@ -10,8 +10,9 @@ use winit::{
 };
 
 use crate::{
-  ctx::WgpuContext,
+  ctx::DrawingContext,
   render::{Render, RenderTarget},
+  surface_cfg::SurfaceConfigBuilder,
 };
 
 pub struct App<'a, R>
@@ -22,8 +23,9 @@ where
   window_title: &'a str,
   window_size: Option<LogicalSize<u32>>,
   initial: R::Initial,
+  ctx: Option<DrawingContext<'a>>,
+  surface_cfg_builder: Option<&'a SurfaceConfigBuilder<'a>>,
   sample_count: u32,
-  ctx: Option<WgpuContext<'a>>,
   renderer: Option<R>,
   render_start_time: Option<std::time::Instant>,
   update_interval: Option<std::time::Duration>,
@@ -42,6 +44,7 @@ where
       initial,
       sample_count: 1,
       ctx: None,
+      surface_cfg_builder: None,
       renderer: None,
       render_start_time: None,
       update_interval: None,
@@ -64,6 +67,14 @@ where
     self
   }
 
+  pub fn with_surface_cfg_builder(
+    mut self,
+    builder: &'a SurfaceConfigBuilder<'a>,
+  ) -> Self {
+    self.surface_cfg_builder = Some(builder);
+    self
+  }
+
   pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
     let event_loop = EventLoop::builder().build()?;
     event_loop.run_app(self)?;
@@ -79,7 +90,14 @@ where
   }
 
   async fn init(&mut self, window: Arc<Window>) {
-    let ctx = WgpuContext::new(window, self.sample_count, None).await;
+    let surface_cfg_builder = match self.surface_cfg_builder {
+      Some(builder) => builder,
+      None => &SurfaceConfigBuilder::new(),
+    };
+
+    let ctx = DrawingContext::new_for_surface(window, &surface_cfg_builder)
+      .await
+      .with_sample_count(self.sample_count);
     self.ctx = Some(ctx);
 
     let renderer = R::new(self.ctx.as_ref().unwrap(), &self.initial).await;
@@ -128,20 +146,28 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
       return;
     }
 
-    let ctx = match &self.ctx {
+    let mut ctx = match &mut self.ctx {
       Some(ctx) => ctx,
       None => return,
     };
 
     match event {
       WindowEvent::Resized(size) => {
-        renderer.resize(ctx, Some(size));
+        renderer.resize(&mut ctx, size.into());
       }
       WindowEvent::RedrawRequested => {
         let ctx = match &mut self.ctx {
           Some(ctx) => ctx,
           None => {
             eprintln!("Context is not initialized");
+            return;
+          }
+        };
+
+        let surface = match ctx.surface() {
+          Some(surface) => surface,
+          None => {
+            eprintln!("Surface is not initialized");
             return;
           }
         };
@@ -157,14 +183,14 @@ impl<'a, R: Render<'a>> ApplicationHandler for App<'a, R> {
 
         let result = renderer.draw(
           &mut command_encoder,
-          RenderTarget::Surface(ctx.surface.as_ref().unwrap()),
+          RenderTarget::Surface(&surface),
           self.sample_count,
         );
 
         match result {
           Ok(frame) => renderer.submit(&ctx.queue, command_encoder, frame),
           Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-            renderer.resize(ctx, None)
+            renderer.resize(ctx, *ctx.size())
           }
           Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
           Err(e) => eprintln!("{:?}", e),
