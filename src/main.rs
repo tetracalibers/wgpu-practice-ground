@@ -35,6 +35,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     "tutorial/compute_visualize_workgroup_local" => {
       Ok(pollster::block_on(compute_visualize_workgroup_local::run())?)
     }
+    "tutorial/compute_mandelbrot_set" => {
+      Ok(pollster::block_on(compute_mandelbrot_set::run())?)
+    }
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
     "prototype/with_gif" => Ok(with_gif::run("with_gif")?),

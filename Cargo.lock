@@ -590,6 +590,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "compute_mandelbrot_set"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "futures-intrusive",
+ "png",
+ "wgpu 22.1.0",
+ "wgsim",
+]
+
+[[package]]
 name = "compute_single_thread"
 version = "0.1.0"
 dependencies = [
@@ -3590,6 +3602,7 @@ dependencies = [
  "ch05-indice",
  "ch06-texture",
  "compute_atomic_add",
+ "compute_mandelbrot_set",
  "compute_single_thread",
  "compute_visualize_workgroup_global",
  "compute_visualize_workgroup_local",
