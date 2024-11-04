@@ -2725,6 +2725,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "shader_step_rect"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "wgpu 22.1.0",
+ "wgsim",
+]
+
+[[package]]
 name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3607,6 +3616,7 @@ dependencies = [
  "pollster",
  "rect-renderer",
  "rotate_cube_basic",
+ "shader_step_rect",
  "text-renderer",
  "with_gif",
  "with_gif_life_game",

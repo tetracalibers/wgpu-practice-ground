@@ -38,6 +38,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     "tutorial/compute_mandelbrot_set" => {
       Ok(pollster::block_on(compute_mandelbrot_set::run())?)
     }
+    "shader_art/shader_step_rect" => {
+      Ok(pollster::block_on(shader_step_rect::run())?)
+    }
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
     "prototype/with_gif" => Ok(with_gif::run("with_gif")?),
