@@ -12,6 +12,7 @@ ch05-indice                                   = { path = "./tutorial/ch05-indice
 ch06-texture                                  = { path = "./tutorial/ch06-texture" }
 life-game                                     = { path = "./tutorial/life-game" }
 hello-glyphon                                 = { path = "./tutorial/hello-glyphon" }
+glyph_geometry_2d                             = { path = "./tutorial/glyph_geometry_2d" }
 compute_single_thread                         = { path = "./tutorial/compute_single_thread" }
 compute_atomic_add                            = { path = "./tutorial/compute_atomic_add" }
 compute_visualize_workgroup_global            = { path = "./tutorial/compute_visualize_workgroup_global" }
@@ -53,6 +54,7 @@ members = [
   "tutorial/compute_visualize_workgroup_global",
   "tutorial/compute_visualize_workgroup_local",
   "tutorial/compute_mandelbrot_set",
+  "tutorial/glyph_geometry_2d",
   "shader_art/shader_step_rect",
   "practice/cube_blinn_phong",
   "practice/rotate_cube_basic",

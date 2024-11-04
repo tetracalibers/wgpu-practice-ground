@@ -115,5 +115,9 @@ cargo run -- export-gif:instanced_cube_sphere_torus/direction_light_2
 ```
 
 ```bash
+cargo run -- tutorial/glyph_geometry_2d
+```
+
+```bash
 cargo run -- examples/empty_window
 ```

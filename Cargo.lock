@@ -1121,6 +1121,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "glyph_geometry_2d"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cgmath",
+ "env_logger",
+ "pollster",
+ "rand",
+ "wgpu 22.1.0",
+ "wgsim",
+]
+
+[[package]]
 name = "glyphon"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3608,6 +3621,7 @@ dependencies = [
  "compute_visualize_workgroup_local",
  "cube_blinn_phong",
  "empty_window",
+ "glyph_geometry_2d",
  "hello-glyphon",
  "instanced_cube_sphere_torus_base",
  "instanced_cube_sphere_torus_direction_light_1",

@@ -23,6 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       Ok(())
     }
     "tutorial/hello-glyphon" => hello_glyphon::run(),
+    "tutorial/glyph_geometry_2d" => Ok(glyph_geometry_2d::run()?),
     "tutorial/compute_single_thread" => {
       Ok(pollster::block_on(compute_single_thread::run())?)
     }
