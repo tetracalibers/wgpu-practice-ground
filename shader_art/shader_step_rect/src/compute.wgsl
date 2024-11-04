@@ -25,8 +25,11 @@ fn cs_main(in: CsInput) {
   let left = step(0.1, uv.x); // Similar to ( X greater than 0.1 )
   let top = step(0.1, uv.y); // Similar to ( Y greater than 0.1 )
   
+  let right = step(0.1, 1.0 - uv.x);
+  let bottom = step(0.1, 1.0 - uv.y);
+  
   // The multiplication of left*bottom will be similar to the logical AND.
-  let color = vec3f(left * top);
+  let color = vec3f(left * top * right * bottom);
   
   //
   // Store color in texture
