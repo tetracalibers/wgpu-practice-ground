@@ -1,3 +1,4 @@
+mod font_data;
 mod instance_defs;
 mod light_defs;
 
