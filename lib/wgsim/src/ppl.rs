@@ -33,11 +33,21 @@ impl<'a> RenderPipelineBuilder<'a> {
     }
   }
 
-  pub fn depth_stencil(
+  pub fn enable_depth_stencil(
     mut self,
-    depth_stencil: wgpu::DepthStencilState,
+    custom_depth_stencil: Option<wgpu::DepthStencilState>,
   ) -> Self {
-    self.depth_stencil = Some(depth_stencil);
+    if let Some(depth_stencil) = custom_depth_stencil {
+      self.depth_stencil = Some(depth_stencil);
+    } else {
+      self.depth_stencil = Some(wgpu::DepthStencilState {
+        format: wgpu::TextureFormat::Depth24Plus,
+        depth_write_enabled: true,
+        depth_compare: wgpu::CompareFunction::LessEqual,
+        stencil: wgpu::StencilState::default(),
+        bias: wgpu::DepthBiasState::default(),
+      });
+    }
     self
   }
 
@@ -96,19 +106,7 @@ impl<'a> RenderPipelineBuilder<'a> {
         compilation_options: wgpu::PipelineCompilationOptions::default(),
       }),
       primitive: self.primitive,
-      depth_stencil: self.depth_stencil.clone().or(
-        if self.ctx.sample_count > 0 {
-          Some(wgpu::DepthStencilState {
-            format: wgpu::TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
-            depth_compare: wgpu::CompareFunction::LessEqual,
-            stencil: wgpu::StencilState::default(),
-            bias: wgpu::DepthBiasState::default(),
-          })
-        } else {
-          None
-        },
-      ),
+      depth_stencil: self.depth_stencil.clone(),
       multisample: wgpu::MultisampleState {
         count: self.ctx.sample_count,
         ..Default::default()
