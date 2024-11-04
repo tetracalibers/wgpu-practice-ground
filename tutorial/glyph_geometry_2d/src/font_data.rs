@@ -11,10 +11,6 @@ pub fn font_file_map(font_selection: u32) -> Option<String> {
     1,
     String::from("./font/Emilys_Candy/EmilysCandy-Regular.ttf"),
   );
-  d.insert(
-    2,
-    String::from("./font/Rubik_Puddles/RubikPuddles-Regular.ttf"),
-  );
   d.get(&font_selection).cloned()
 }
 
