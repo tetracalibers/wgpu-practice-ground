@@ -3,17 +3,21 @@ mod font_data;
 use std::error::Error;
 
 use bytemuck::cast_slice;
+use enum_rotate::EnumRotate;
+use font_data::FontSelection;
 use wgpu::util::DeviceExt;
 use wgsim::app::App;
 use wgsim::ctx::{DrawingContext, Size};
 use wgsim::ppl::RenderPipelineBuilder;
 use wgsim::render::{Render, RenderTarget};
 use wgsim::util;
+use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::keyboard::{KeyCode, PhysicalKey};
 
 fn setup() -> Initial<'static> {
   Initial {
     text: "Hello, World!",
-    font_selection: 1,
+    font_selection: FontSelection::Lusitana,
     text_position: [0.0, 0.0],
     color: [1.0, 1.0, 1.0, 1.0],
     scale: 0.45,
@@ -32,7 +36,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 }
 
 struct Initial<'a> {
-  font_selection: u32,
+  font_selection: FontSelection,
   text: &'a str,
   text_position: [f32; 2],
   color: [f32; 4],
@@ -51,7 +55,7 @@ struct State {
   msaa_texture_view: wgpu::TextureView,
 
   data_changed: bool,
-  font_selection: u32,
+  font_selection: FontSelection,
   text: String,
   text_position: [f32; 2],
   scale: f32,
@@ -131,7 +135,7 @@ impl<'a> Render<'a> for State {
     //
 
     let geometry = font_data::get_text_vertices_2d(
-      0,
+      initial.font_selection,
       initial.text,
       initial.text_position,
       initial.scale,
@@ -180,6 +184,28 @@ impl<'a> Render<'a> for State {
       }
 
       self.data_changed = true;
+    }
+  }
+
+  fn process_event(&mut self, event: &WindowEvent) -> bool {
+    match event {
+      WindowEvent::KeyboardInput {
+        event:
+          KeyEvent {
+            physical_key,
+            state: ElementState::Pressed,
+            ..
+          },
+        ..
+      } => match physical_key {
+        PhysicalKey::Code(KeyCode::Space) => {
+          self.font_selection = self.font_selection.next();
+          self.data_changed = true;
+          true
+        }
+        _ => false,
+      },
+      _ => false,
     }
   }
 

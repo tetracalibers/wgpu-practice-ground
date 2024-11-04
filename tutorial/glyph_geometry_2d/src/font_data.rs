@@ -1,15 +1,26 @@
 use std::{collections::HashMap, fs};
 
+use enum_rotate::EnumRotate;
 use meshtext::{IndexedMeshText, MeshGenerator, TextSection};
 
-fn font_file_map(font_selection: u32) -> Option<String> {
+#[derive(Clone, Copy, EnumRotate)]
+pub enum FontSelection {
+  Lusitana,
+  EmilysCandy,
+}
+
+fn font_file_map(font_selection: FontSelection) -> Option<String> {
+  let f = font_selection as u32;
   let mut d: HashMap<u32, String> = HashMap::new();
-  d.insert(0, String::from("./font/Lusitana/Lusitana-Regular.ttf"));
   d.insert(
-    1,
+    FontSelection::Lusitana as u32,
+    String::from("./font/Lusitana/Lusitana-Regular.ttf"),
+  );
+  d.insert(
+    FontSelection::EmilysCandy as u32,
     String::from("./font/Emilys_Candy/EmilysCandy-Regular.ttf"),
   );
-  d.get(&font_selection).cloned()
+  d.get(&f).cloned()
 }
 
 pub struct TextVertices2d {
@@ -19,7 +30,7 @@ pub struct TextVertices2d {
 }
 
 pub fn get_text_vertices_2d(
-  font_selection: u32,
+  font_selection: FontSelection,
   text: &str,
   pos: [f32; 2],
   scale: f32,
