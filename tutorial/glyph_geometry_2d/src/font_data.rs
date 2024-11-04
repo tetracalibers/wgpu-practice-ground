@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs};
 
 use meshtext::{IndexedMeshText, MeshGenerator, TextSection};
 
-pub fn font_file_map(font_selection: u32) -> Option<String> {
+fn font_file_map(font_selection: u32) -> Option<String> {
   let mut d: HashMap<u32, String> = HashMap::new();
   d.insert(0, String::from("./font/Lusitana/Lusitana-Regular.ttf"));
   d.insert(
