@@ -6,7 +6,6 @@ use bytemuck::cast_slice;
 use wgpu::util::DeviceExt;
 use wgsim::app::App;
 use wgsim::ctx::{DrawingContext, Size};
-use wgsim::export::Gif;
 use wgsim::ppl::RenderPipelineBuilder;
 use wgsim::render::{Render, RenderTarget};
 use wgsim::util;
@@ -28,17 +27,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let mut app: App<State> = App::new("glyph-geometry-2d", initial).with_msaa();
   app.run()?;
-
-  Ok(())
-}
-
-pub async fn export_gif() -> Result<(), Box<dyn Error>> {
-  env_logger::init();
-
-  let initial = setup();
-
-  let mut gif = Gif::<State>::new(1024, initial, true).await;
-  gif.export("export/glyph-geometry-2d.gif", 50, 30).await?;
 
   Ok(())
 }
