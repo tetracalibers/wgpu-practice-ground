@@ -27,22 +27,16 @@ pub fn get_text_vertices_2d(
   scale: f32,
   aspect: f32,
 ) -> TextVertices2d {
-  let mut scale1 = 0.22 * scale;
   let font_data = fs::read(font_file_map(font_selection).unwrap()).unwrap();
-  if font_selection == 1 {
-    scale1 *= 1.5;
-  } else if font_selection == 2 {
-    scale1 *= 2.0;
-  }
   let font_data_static = Box::leak(font_data.into_boxed_slice());
 
   let mut generator = MeshGenerator::new(font_data_static);
   let transform = [
-    scale1,
+    scale,
     0.0,
     0.0,
     0.0,
-    scale1 * aspect,
+    scale * aspect,
     0.0,
     pos[0],
     pos[1],

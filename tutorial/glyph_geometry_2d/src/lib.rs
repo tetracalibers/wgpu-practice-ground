@@ -17,7 +17,7 @@ fn setup() -> Initial<'static> {
     font_selection: 1,
     text_position: [0.0, 0.0],
     color: [1.0, 1.0, 1.0, 1.0],
-    scale: 1.0,
+    scale: 0.45,
   }
 }
 
