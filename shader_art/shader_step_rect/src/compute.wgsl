@@ -21,14 +21,12 @@ fn cs_main(in: CsInput) {
   // Shader Art
   //
   
-  // Each result will return 1.0 (white) or 0.0 (black).
-  let left = step(0.1, uv.x); // Similar to ( X greater than 0.1 )
-  let top = step(0.1, uv.y); // Similar to ( Y greater than 0.1 )
+  let left = step(0.1, uv.x);
+  let top = step(0.1, uv.y);
   
   let right = step(0.1, 1.0 - uv.x);
   let bottom = step(0.1, 1.0 - uv.y);
   
-  // The multiplication of left*bottom will be similar to the logical AND.
   let color = vec3f(left * top * right * bottom);
   
   //
