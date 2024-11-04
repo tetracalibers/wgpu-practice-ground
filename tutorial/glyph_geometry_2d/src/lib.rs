@@ -1,50 +1,32 @@
 mod font_data;
-mod instance_defs;
-mod light_defs;
 
 use std::error::Error;
 
 use bytemuck::cast_slice;
-use cgmath::{Matrix4, Point3, Vector3};
-use instance_defs::{Matrices, Shapes, Vertex};
-use light_defs::DirectionLight;
 use wgpu::util::DeviceExt;
 use wgsim::app::App;
 use wgsim::ctx::{DrawingContext, Size};
 use wgsim::export::Gif;
-use wgsim::matrix;
 use wgsim::ppl::RenderPipelineBuilder;
 use wgsim::render::{Render, RenderTarget};
 use wgsim::util;
 
-const NUM_CUBES: u32 = 50;
-const NUM_SPHERES: u32 = 50;
-const NUM_TORI: u32 = 50;
-
-fn setup(animation_speed: f32) -> Initial {
+fn setup() -> Initial<'static> {
   Initial {
-    camera_position: Point3::new(8., 8., 16.),
-    look_direction: Point3::new(0., 0., 0.),
-    up_direction: Vector3::unit_y(),
-
-    light: DirectionLight {
-      direction: Point3::new(0.2, 1., 0.3).into(),
-      color: Point3::new(1., 1., 1.).into(),
-    },
-    ambient: 0.2,
-
-    animation_speed,
+    text: "Hello, World!",
+    font_selection: 1,
+    text_position: [0.0, 0.0],
+    color: [1.0, 1.0, 1.0, 1.0],
+    scale: 1.0,
   }
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
   env_logger::init();
 
-  let initial = setup(1.);
+  let initial = setup();
 
-  let mut app: App<State> =
-    App::new("instanced_cube_sphere_torus - direction_light_2", initial)
-      .with_msaa();
+  let mut app: App<State> = App::new("glyph-geometry-2d", initial).with_msaa();
   app.run()?;
 
   Ok(())
@@ -53,174 +35,61 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 pub async fn export_gif() -> Result<(), Box<dyn Error>> {
   env_logger::init();
 
-  let initial = setup(3.);
+  let initial = setup();
 
   let mut gif = Gif::<State>::new(1024, initial, true).await;
-  gif
-    .export(
-      "export/instanced-cube-sphere-torus_direction-light-diffuse-ambient.gif",
-      50,
-      30,
-    )
-    .await?;
+  gif.export("export/glyph-geometry-2d.gif", 50, 30).await?;
 
   Ok(())
 }
 
-struct Initial {
-  pub camera_position: Point3<f32>,
-  pub look_direction: Point3<f32>,
-  pub up_direction: Vector3<f32>,
-
-  pub light: DirectionLight,
-  pub ambient: f32,
-
-  pub animation_speed: f32,
+struct Initial<'a> {
+  font_selection: u32,
+  text: &'a str,
+  text_position: [f32; 2],
+  color: [f32; 4],
+  scale: f32,
 }
 
 struct State {
   pipeline: wgpu::RenderPipeline,
 
-  shapes: Shapes,
+  vertex_buffer: wgpu::Buffer,
+  index_buffer: wgpu::Buffer,
+  index_count: u32,
 
-  vert_bind_group: wgpu::BindGroup,
   frag_bind_group: wgpu::BindGroup,
 
   msaa_texture_view: wgpu::TextureView,
-  depth_texture_view: wgpu::TextureView,
 
-  light_uniform_buffer: wgpu::Buffer,
-  vp_uniform_buffer: wgpu::Buffer,
-
-  view_mat: Matrix4<f32>,
-  project_mat: Matrix4<f32>,
-
-  animation_speed: f32,
+  data_changed: bool,
+  font_selection: u32,
+  text: String,
+  text_position: [f32; 2],
+  scale: f32,
 }
 
 impl<'a> Render<'a> for State {
-  type Initial = Initial;
+  type Initial = Initial<'a>;
 
   async fn new(ctx: &DrawingContext<'a>, initial: &Self::Initial) -> Self {
     //
     // shader
     //
 
-    let vs_shader = ctx
-      .device
-      .create_shader_module(wgpu::include_wgsl!("./shader-vert.wgsl"));
-    let fs_shader = ctx
-      .device
-      .create_shader_module(wgpu::include_wgsl!("./shader-frag.wgsl"));
-
-    //
-    // matrix
-    //
-
-    let objects_count = NUM_CUBES + NUM_SPHERES + NUM_TORI;
-    let aspect = ctx.aspect_ratio();
-
-    let Matrices {
-      model_mat,
-      normal_mat,
-      color_vec,
-    } = instance_defs::create_transform_mat_color(objects_count, true);
-
-    let view_mat = matrix::create_view_mat(
-      initial.camera_position,
-      initial.look_direction,
-      initial.up_direction,
-    );
-    let project_mat = matrix::create_projection_mat(aspect, true);
-    let vp_mat = project_mat * view_mat;
+    let shader =
+      ctx.device.create_shader_module(wgpu::include_wgsl!("./glyph_2d.wgsl"));
 
     //
     // uniform
     //
 
-    let vp_uniform_buffer =
-      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("View-Projection Buffer"),
-        contents: cast_slice(vp_mat.as_ref() as &[f32; 16]),
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-      });
-
-    let model_uniform_buffer =
-      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Model Uniform Buffer"),
-        contents: cast_slice(model_mat.as_slice()),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-      });
-
-    let normal_uniform_buffer =
-      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Normal Uniform Buffer"),
-        contents: cast_slice(normal_mat.as_slice()),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-      });
-
     let color_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("color Uniform Buffer"),
-        contents: cast_slice(color_vec.as_slice()),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-      });
-
-    let light_uniform_buffer =
-      ctx.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Light Uniform Buffer"),
-        size: (std::mem::size_of::<[f32; 4]>() * 4) as wgpu::BufferAddress,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-      });
-    ctx.queue.write_buffer(
-      &light_uniform_buffer,
-      4 * 4 * 0,
-      cast_slice(&initial.light.direction),
-    );
-    ctx.queue.write_buffer(
-      &light_uniform_buffer,
-      4 * 4 * 1,
-      cast_slice(&initial.light.color),
-    );
-
-    let ambient_uniform_buffer =
-      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Ambient Uniform Buffer"),
-        contents: cast_slice(&[initial.ambient]),
+        label: Some("color uniform buffer"),
+        contents: cast_slice(&initial.color),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
-
-    //
-    // uniform bind group for vertex shader
-    //
-
-    let vert_bind_group_layout = util::create_bind_group_layout_for_buffer(
-      &ctx.device,
-      &[
-        wgpu::BufferBindingType::Uniform,
-        wgpu::BufferBindingType::Storage { read_only: true },
-        wgpu::BufferBindingType::Storage { read_only: true },
-        wgpu::BufferBindingType::Storage { read_only: true },
-      ],
-      &[
-        wgpu::ShaderStages::VERTEX,
-        wgpu::ShaderStages::VERTEX,
-        wgpu::ShaderStages::VERTEX,
-        wgpu::ShaderStages::VERTEX,
-      ],
-    );
-
-    let vert_bind_group = util::create_bind_group(
-      &ctx.device,
-      &vert_bind_group_layout,
-      &[
-        vp_uniform_buffer.as_entire_binding(),
-        model_uniform_buffer.as_entire_binding(),
-        normal_uniform_buffer.as_entire_binding(),
-        color_uniform_buffer.as_entire_binding(),
-      ],
-    );
 
     //
     // uniform bind group for fragment shader
@@ -228,20 +97,14 @@ impl<'a> Render<'a> for State {
 
     let frag_bind_group_layout = util::create_bind_group_layout_for_buffer(
       &ctx.device,
-      &[
-        wgpu::BufferBindingType::Uniform,
-        wgpu::BufferBindingType::Uniform,
-      ],
-      &[wgpu::ShaderStages::FRAGMENT, wgpu::ShaderStages::FRAGMENT],
+      &[wgpu::BufferBindingType::Uniform],
+      &[wgpu::ShaderStages::FRAGMENT],
     );
 
     let frag_bind_group = util::create_bind_group(
       &ctx.device,
       &frag_bind_group_layout,
-      &[
-        light_uniform_buffer.as_entire_binding(),
-        ambient_uniform_buffer.as_entire_binding(),
-      ],
+      &[color_uniform_buffer.as_entire_binding()],
     );
 
     //
@@ -249,21 +112,21 @@ impl<'a> Render<'a> for State {
     //
 
     let vertex_buffer_layout = [wgpu::VertexBufferLayout {
-      array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+      array_stride: std::mem::size_of::<f32>() as wgpu::BufferAddress * 2,
       step_mode: wgpu::VertexStepMode::Vertex,
-      attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
+      attributes: &wgpu::vertex_attr_array![0 => Float32x2],
     }];
 
     let pipeline_layout =
       ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render Pipeline Layout"),
-        bind_group_layouts: &[&vert_bind_group_layout, &frag_bind_group_layout],
+        bind_group_layouts: &[&frag_bind_group_layout],
         push_constant_ranges: &[],
       });
 
     let pipeline_builder = RenderPipelineBuilder::new(&ctx)
-      .vs_shader(&vs_shader, "vs_main")
-      .fs_shader(&fs_shader, "fs_main")
+      .vs_shader(&shader, "vs_main")
+      .fs_shader(&shader, "fs_main")
       .pipeline_layout(&pipeline_layout)
       .vertex_buffer_layout(&vertex_buffer_layout);
 
@@ -274,26 +137,49 @@ impl<'a> Render<'a> for State {
     //
 
     let msaa_texture_view = util::create_msaa_texture_view(&ctx);
-    let depth_texture_view = util::create_depth_view(&ctx);
 
     //
     // vertex and index buffers for objects
     //
 
-    let shapes = instance_defs::create_object_buffers(&ctx.device);
+    let geometry = font_data::get_text_vertices_2d(
+      0,
+      initial.text,
+      initial.text_position,
+      initial.scale,
+      ctx.aspect_ratio(),
+    );
+
+    let vertex_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: geometry.vertices.as_slice(),
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+      });
+
+    let index_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Index Buffer"),
+        contents: geometry.indices.as_slice(),
+        usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+      });
 
     Self {
       pipeline,
-      shapes,
-      vert_bind_group,
+
+      vertex_buffer,
+      index_buffer,
+      index_count: geometry.indices_len,
+
       frag_bind_group,
+
       msaa_texture_view,
-      depth_texture_view,
-      light_uniform_buffer,
-      vp_uniform_buffer,
-      view_mat,
-      project_mat,
-      animation_speed: initial.animation_speed,
+
+      data_changed: false,
+      text: initial.text.to_string(),
+      text_position: initial.text_position,
+      font_selection: initial.font_selection,
+      scale: initial.scale,
     }
   }
 
@@ -301,37 +187,44 @@ impl<'a> Render<'a> for State {
     if size.width > 0 && size.height > 0 {
       ctx.resize(size.into());
 
-      self.project_mat = matrix::create_projection_mat(
-        size.width as f32 / size.height as f32,
-        true,
-      );
-
-      self.depth_texture_view = util::create_depth_view(ctx);
-
       if ctx.sample_count > 1 {
         self.msaa_texture_view = util::create_msaa_texture_view(&ctx);
       }
+
+      self.data_changed = true;
     }
   }
 
-  fn update(&mut self, ctx: &DrawingContext, dt: std::time::Duration) {
-    let dt = self.animation_speed * dt.as_secs_f32();
-    let sin = 10.0 * (0.5 + dt.sin());
-    let cos = 10.0 * (0.5 + dt.cos());
+  fn update(&mut self, ctx: &DrawingContext, _dt: std::time::Duration) {
+    if !self.data_changed {
+      return;
+    }
 
-    ctx.queue.write_buffer(
-      &self.light_uniform_buffer,
-      0,
-      cast_slice([-0.2 * sin, -0.3 * cos, -1.0].as_ref()),
+    let geometry = font_data::get_text_vertices_2d(
+      self.font_selection,
+      &self.text,
+      self.text_position,
+      self.scale,
+      ctx.aspect_ratio(),
     );
 
-    let view_project_mat = self.project_mat * self.view_mat;
-    let view_projection_ref: &[f32; 16] = view_project_mat.as_ref();
-    ctx.queue.write_buffer(
-      &self.vp_uniform_buffer,
-      0,
-      cast_slice(view_projection_ref),
-    );
+    self.vertex_buffer.destroy();
+    self.index_buffer.destroy();
+    self.vertex_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: geometry.vertices.as_slice(),
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+      });
+    self.index_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Index Buffer"),
+        contents: geometry.indices.as_slice(),
+        usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+      });
+    self.index_count = geometry.indices_len;
+
+    self.data_changed = false;
   }
 
   fn draw(
@@ -361,59 +254,20 @@ impl<'a> Render<'a> for State {
     } else {
       msaa_attach
     };
-    let depth_attachment =
-      util::create_depth_stencil_attachment(&self.depth_texture_view);
 
     let mut render_pass =
       encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("Render Pass"),
         color_attachments: &[Some(color_attachment)],
-        depth_stencil_attachment: Some(depth_attachment),
         ..Default::default()
       });
 
     render_pass.set_pipeline(&self.pipeline);
-    render_pass.set_bind_group(0, &self.vert_bind_group, &[]);
-    render_pass.set_bind_group(1, &self.frag_bind_group, &[]);
-
-    //
-    // draw cubes
-    //
-    render_pass.set_vertex_buffer(0, self.shapes.cube.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(
-      self.shapes.cube.index_buffer.slice(..),
-      wgpu::IndexFormat::Uint16,
-    );
-    render_pass.draw_indexed(0..self.shapes.cube.index_count, 0, 0..NUM_CUBES);
-
-    //
-    // draw spheres
-    //
+    render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
     render_pass
-      .set_vertex_buffer(0, self.shapes.sphere.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(
-      self.shapes.sphere.index_buffer.slice(..),
-      wgpu::IndexFormat::Uint16,
-    );
-    render_pass.draw_indexed(
-      0..self.shapes.sphere.index_count,
-      0,
-      NUM_CUBES..NUM_CUBES + NUM_SPHERES,
-    );
-
-    //
-    // draw tori
-    //
-    render_pass.set_vertex_buffer(0, self.shapes.torus.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(
-      self.shapes.torus.index_buffer.slice(..),
-      wgpu::IndexFormat::Uint16,
-    );
-    render_pass.draw_indexed(
-      0..self.shapes.torus.index_count,
-      0,
-      NUM_CUBES + NUM_SPHERES..NUM_CUBES + NUM_SPHERES + NUM_TORI,
-    );
+      .set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+    render_pass.set_bind_group(0, &self.frag_bind_group, &[]);
+    render_pass.draw_indexed(0..self.index_count, 0, 0..1);
 
     drop(render_pass);
 
