@@ -6,7 +6,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   env_logger::init();
 
   const IMG_SIZE: u32 = 512;
-  const EXPORT_PATH: &str = "export/shader-step-rect.png";
+  const EXPORT_PATH: &str = "export/shader-step-rect-1.png";
 
   let pixel = ComputePixel::new(
     wgpu::include_wgsl!("./compute.wgsl"),
