@@ -21,13 +21,13 @@ fn cs_main(in: CsInput) {
   // Shader Art
   //
   
-  let left = step(0.1, uv.x);
-  let top = step(0.1, uv.y);
+  // (left, top)
+  let lt = step(vec2f(0.1), uv);
   
-  let right = step(0.1, 1.0 - uv.x);
-  let bottom = step(0.1, 1.0 - uv.y);
+  // (right, bottom)
+  let rb = step(vec2f(0.1), 1.0 - uv);
   
-  let color = vec3f(left * top * right * bottom);
+  let color = vec3f(lt.x * lt.y * rb.x * rb.y);
   
   //
   // Store color in texture
