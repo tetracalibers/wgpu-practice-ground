@@ -1,8 +1,6 @@
 use std::{collections::HashMap, fs};
 
-use bytemuck::{Pod, Zeroable};
-use cgmath::{InnerSpace, Vector3};
-use meshtext::{IndexedMeshText, MeshGenerator, MeshText, TextSection};
+use meshtext::{IndexedMeshText, MeshGenerator, TextSection};
 
 pub fn font_file_map(font_selection: u32) -> Option<String> {
   let mut d: HashMap<u32, String> = HashMap::new();
@@ -61,75 +59,4 @@ pub fn get_text_vertices_2d(
     indices: index_data,
     indices_len: data.indices.len() as u32,
   }
-}
-
-fn get_text_positions(font_selection: u32, text: &str) -> Vec<[f32; 3]> {
-  let mut scale = 1.0;
-  let font_data = fs::read(font_file_map(font_selection).unwrap()).unwrap();
-  if font_selection == 1 {
-    scale *= 1.5;
-  } else if font_selection == 2 {
-    scale *= 2.0;
-  }
-  let font_data_static = Box::leak(font_data.into_boxed_slice());
-
-  let mut generator = MeshGenerator::new(font_data_static);
-  let transform = [
-    scale,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    scale,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.1 * scale,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    1.0,
-  ];
-  let data: MeshText = generator
-    .generate_section(text, false, Some(&transform))
-    .expect("failed to generate glyph.");
-  let vertices = data.vertices;
-  let positions: Vec<[f32; 3]> = vertices
-    .chunks(3)
-    .map(|c| [c[0] - 0.5 * data.bbox.size().x, c[1], c[2]])
-    .collect();
-
-  positions
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct Vertex {
-  pub position: [f32; 3],
-  pub normal: [f32; 3],
-}
-
-impl Vertex {
-  pub fn new(position: [f32; 3], normal: [f32; 3]) -> Self {
-    Self { position, normal }
-  }
-}
-
-pub fn create_text_vertices(font_selection: u32, text: &str) -> Vec<Vertex> {
-  let pos = get_text_positions(font_selection, text);
-  let mut vertices: Vec<Vertex> = vec![];
-
-  for chunk in pos.chunks_exact(3) {
-    let p1 = Vector3::from(chunk[0]);
-    let p2 = Vector3::from(chunk[1]);
-    let p3 = Vector3::from(chunk[2]);
-    let normal = (p2 - p1).cross(p3 - p1).normalize();
-
-    vertices.push(Vertex::new(p1.into(), normal.into()));
-    vertices.push(Vertex::new(p2.into(), normal.into()));
-    vertices.push(Vertex::new(p3.into(), normal.into()));
-  }
-  vertices
 }
