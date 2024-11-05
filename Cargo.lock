@@ -1361,10 +1361,8 @@ dependencies = [
 name = "image_blur"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bytemuck",
  "cgmath",
- "enum-rotate",
  "env_logger",
  "pollster",
  "rand",

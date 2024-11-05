@@ -226,7 +226,7 @@ impl<'a> Render<'a> for State {
     encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
     sample_count: u32,
-  ) -> anyhow::Result<Option<wgpu::SurfaceTexture>, wgpu::SurfaceError> {
+  ) -> Result<Option<wgpu::SurfaceTexture>, wgpu::SurfaceError> {
     let (view, frame) = match target {
       RenderTarget::Surface(surface) => {
         let frame = surface.get_current_texture()?;
