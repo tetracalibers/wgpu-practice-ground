@@ -11,3 +11,4 @@ wgpu       = "22.1.0"
 wgsim      = { path = "../../lib/wgsim" }
 pollster   = "0.3.0"
 rand       = "0.8.5"
+image      = "0.25.5"
