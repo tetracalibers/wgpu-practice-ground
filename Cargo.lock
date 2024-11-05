@@ -1358,6 +1358,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "image_blur"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cgmath",
+ "enum-rotate",
+ "env_logger",
+ "pollster",
+ "rand",
+ "wgpu 22.1.0",
+ "wgsim",
+]
+
+[[package]]
 name = "imgref"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3662,6 +3677,7 @@ dependencies = [
  "empty_window",
  "glyph_geometry_2d",
  "hello-glyphon",
+ "image_blur",
  "instanced_cube_sphere_torus_base",
  "instanced_cube_sphere_torus_direction_light_1",
  "instanced_cube_sphere_torus_direction_light_2",

@@ -42,6 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     "shader_art/shader_step_rect" => {
       Ok(pollster::block_on(shader_step_rect::run())?)
     }
+    "image_processing/image_blur" => Ok(image_blur::run()?),
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
     "prototype/with_gif" => Ok(with_gif::run("with_gif")?),

@@ -95,6 +95,10 @@ cargo run -- shader_art/shader_step_rect
 ```
 
 ```bash
+cargo run -- image_processing/image_blur
+```
+
+```bash
 cargo run -- instanced_cube_sphere_torus/base
 ```
 
