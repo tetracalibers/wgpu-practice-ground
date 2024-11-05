@@ -264,7 +264,8 @@ impl<'a> Render<'a> for State {
       .vs_shader(&vs_shader, "vs_main")
       .fs_shader(&fs_shader, "fs_main")
       .pipeline_layout(&pipeline_layout)
-      .vertex_buffer_layout(&vertex_buffer_layout);
+      .vertex_buffer_layout(&vertex_buffer_layout)
+      .enable_depth_stencil(None);
 
     let pipeline = pipeline_builder.build();
 
