@@ -147,7 +147,7 @@ impl<'a> Render<'a> for State {
       });
 
     //
-    // uniform bind group
+    // bind group
     //
 
     let sampler_binding_type =
