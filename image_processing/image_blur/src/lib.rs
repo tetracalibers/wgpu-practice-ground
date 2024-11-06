@@ -21,7 +21,7 @@ fn setup() -> Initial {
   Initial {
     image,
     image_size,
-    filter_size: 15,
+    filter_size: 8,
     iterations: 2,
   }
 }
