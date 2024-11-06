@@ -165,6 +165,12 @@ impl<'a> Render<'a> for State {
       multisampled: false,
     };
 
+    let texture_storage_binding_type = wgpu::BindingType::StorageTexture {
+      access: wgpu::StorageTextureAccess::WriteOnly,
+      format: texture_desc.format,
+      view_dimension: wgpu::TextureViewDimension::D2,
+    };
+
     let compute_constants_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
       &[sampler_binding_type, uniform_binding_type],
@@ -183,11 +189,7 @@ impl<'a> Render<'a> for State {
       &ctx.device,
       &[
         texture_binding_type,
-        wgpu::BindingType::StorageTexture {
-          access: wgpu::StorageTextureAccess::WriteOnly,
-          format: texture_desc.format,
-          view_dimension: wgpu::TextureViewDimension::D2,
-        },
+        texture_storage_binding_type,
         uniform_binding_type,
       ],
       &[
