@@ -1,27 +1,28 @@
-mod instance_defs;
-
 use std::error::Error;
 
 use bytemuck::cast_slice;
-use cgmath::{Matrix4, Point3, Vector3};
-use instance_defs::{Matrices, Shapes, Vertex};
+use image::GenericImageView;
 use wgpu::util::DeviceExt;
 use wgsim::app::App;
-use wgsim::ctx::{DrawingContext, Size};
-use wgsim::matrix;
-use wgsim::ppl::RenderPipelineBuilder;
+use wgsim::ctx::DrawingContext;
+use wgsim::ppl::{ComputePipelineBuilder, RenderPipelineBuilder};
 use wgsim::render::{Render, RenderTarget};
 use wgsim::util;
 
-const NUM_CUBES: u32 = 50;
-const NUM_SPHERES: u32 = 50;
-const NUM_TORI: u32 = 50;
+const TILE_DIM: u32 = 128;
+const BATCH: [u32; 2] = [4, 4];
 
 fn setup() -> Initial {
+  let img_bytes =
+    include_bytes!("../../../assets/img/stained-glass_512x512.png");
+  let image = image::load_from_memory(img_bytes).unwrap();
+  let image_size = image.dimensions();
+
   Initial {
-    camera_position: Point3::new(8., 8., 16.),
-    look_direction: Point3::new(0., 0., 0.),
-    up_direction: Vector3::unit_y(),
+    image,
+    image_size,
+    filter_size: 15,
+    iterations: 2,
   }
 }
 
@@ -38,22 +39,24 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 }
 
 struct Initial {
-  pub camera_position: Point3<f32>,
-  pub look_direction: Point3<f32>,
-  pub up_direction: Vector3<f32>,
+  image: image::DynamicImage,
+  image_size: (u32, u32),
+  filter_size: u32,
+  iterations: u32,
 }
 
 struct State {
-  pipeline: wgpu::RenderPipeline,
+  blur_pipeline: wgpu::ComputePipeline,
+  fullscreen_quad_pipeline: wgpu::RenderPipeline,
+  compute_constants_bind_group: wgpu::BindGroup,
+  compute_bind_group_0: wgpu::BindGroup,
+  compute_bind_group_1: wgpu::BindGroup,
+  compute_bind_group_2: wgpu::BindGroup,
+  show_result_bind_group: wgpu::BindGroup,
 
-  shapes: Shapes,
-
-  vert_bind_group: wgpu::BindGroup,
-
-  msaa_texture_view: wgpu::TextureView,
-  depth_texture_view: wgpu::TextureView,
-
-  project_mat: Matrix4<f32>,
+  image_size: (u32, u32),
+  block_dim: u32,
+  iterations: u32,
 }
 
 impl<'a> Render<'a> for State {
@@ -64,94 +67,192 @@ impl<'a> Render<'a> for State {
     // shader
     //
 
-    let vs_shader = ctx
-      .device
-      .create_shader_module(wgpu::include_wgsl!("./shader-vert.wgsl"));
-    let fs_shader = ctx
-      .device
-      .create_shader_module(wgpu::include_wgsl!("./shader-frag.wgsl"));
-
-    //
-    // matrix
-    //
-
-    let objects_count = NUM_CUBES + NUM_SPHERES + NUM_TORI;
-    let aspect = ctx.aspect_ratio();
-
-    let Matrices {
-      model_mat,
-      normal_mat,
-      color_vec,
-    } = instance_defs::create_transform_mat_color(objects_count, true);
-
-    let view_mat = matrix::create_view_mat(
-      initial.camera_position,
-      initial.look_direction,
-      initial.up_direction,
+    let fullscreen_quad_shader = ctx.device.create_shader_module(
+      wgpu::include_wgsl!("./fullscreen-textured-quad.wgsl"),
     );
-    let project_mat = matrix::create_projection_mat(aspect, true);
-    let vp_mat = project_mat * view_mat;
+    let blur_shader =
+      ctx.device.create_shader_module(wgpu::include_wgsl!("./blur.wgsl"));
+
+    //
+    // texture & sampler
+    //
+
+    let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
+      label: Some("sampler"),
+      mag_filter: wgpu::FilterMode::Linear,
+      min_filter: wgpu::FilterMode::Linear,
+      ..Default::default()
+    });
+
+    let texture_desc = wgpu::TextureDescriptor {
+      label: Some("texture"),
+      size: wgpu::Extent3d {
+        width: initial.image_size.0,
+        height: initial.image_size.1,
+        depth_or_array_layers: 1,
+      },
+      mip_level_count: 1,
+      sample_count: 1,
+      dimension: wgpu::TextureDimension::D2,
+      format: wgpu::TextureFormat::Rgba8Unorm,
+      usage: wgpu::TextureUsages::COPY_DST
+        | wgpu::TextureUsages::STORAGE_BINDING
+        | wgpu::TextureUsages::TEXTURE_BINDING,
+      view_formats: &[],
+    };
+
+    let image_texture = ctx.device.create_texture(&texture_desc);
+    ctx.queue.write_texture(
+      image_texture.as_image_copy(),
+      &initial.image.to_rgba8(),
+      wgpu::ImageDataLayout {
+        offset: 0,
+        bytes_per_row: Some(4 * initial.image_size.0),
+        rows_per_image: Some(initial.image_size.1),
+      },
+      wgpu::Extent3d {
+        width: initial.image_size.0,
+        height: initial.image_size.1,
+        depth_or_array_layers: 1,
+      },
+    );
+
+    let textures = (0..=1)
+      .map(|_| ctx.device.create_texture(&texture_desc))
+      .collect::<Vec<_>>();
 
     //
     // uniform
     //
 
-    let vp_uniform_buffer =
+    let flip_0_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("View-Projection Buffer"),
-        contents: cast_slice(vp_mat.as_ref() as &[f32; 16]),
+        label: Some("flip uniform buffer with 0"),
+        contents: cast_slice(&[0u32]),
+        usage: wgpu::BufferUsages::UNIFORM,
+      });
+
+    let flip_1_uniform_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("flip uniform buffer with 1"),
+        contents: cast_slice(&[1u32]),
+        usage: wgpu::BufferUsages::UNIFORM,
+      });
+
+    let block_dim = TILE_DIM - (initial.filter_size - 1);
+    let blur_params_uniform_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("blur params uniform buffer"),
+        contents: cast_slice(&[initial.filter_size, block_dim]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
-    let model_uniform_buffer =
-      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Model Uniform Buffer"),
-        contents: cast_slice(model_mat.as_slice()),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-      });
-
-    let normal_uniform_buffer =
-      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Normal Uniform Buffer"),
-        contents: cast_slice(normal_mat.as_slice()),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-      });
-
-    let color_uniform_buffer =
-      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("color Uniform Buffer"),
-        contents: cast_slice(color_vec.as_slice()),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-      });
-
     //
-    // uniform bind group for vertex shader
+    // uniform bind group
     //
 
-    let vert_bind_group_layout = util::create_bind_group_layout_for_buffer(
+    let sampler_binding_type =
+      wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
+
+    let uniform_binding_type = wgpu::BindingType::Buffer {
+      ty: wgpu::BufferBindingType::Uniform,
+      has_dynamic_offset: false,
+      min_binding_size: None,
+    };
+
+    let texture_binding_type = wgpu::BindingType::Texture {
+      sample_type: wgpu::TextureSampleType::Float { filterable: true },
+      view_dimension: wgpu::TextureViewDimension::D2,
+      multisampled: false,
+    };
+
+    let compute_constants_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
+      &[sampler_binding_type, uniform_binding_type],
+      &[wgpu::ShaderStages::COMPUTE, wgpu::ShaderStages::COMPUTE],
+    );
+    let compute_constants_bind_group = util::create_bind_group(
+      &ctx.device,
+      &compute_constants_bind_group_layout,
       &[
-        wgpu::BufferBindingType::Uniform,
-        wgpu::BufferBindingType::Storage { read_only: true },
-        wgpu::BufferBindingType::Storage { read_only: true },
-        wgpu::BufferBindingType::Storage { read_only: true },
-      ],
-      &[
-        wgpu::ShaderStages::VERTEX,
-        wgpu::ShaderStages::VERTEX,
-        wgpu::ShaderStages::VERTEX,
-        wgpu::ShaderStages::VERTEX,
+        wgpu::BindingResource::Sampler(&sampler),
+        blur_params_uniform_buffer.as_entire_binding(),
       ],
     );
 
-    let vert_bind_group = util::create_bind_group(
+    let compute_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
-      &vert_bind_group_layout,
       &[
-        vp_uniform_buffer.as_entire_binding(),
-        model_uniform_buffer.as_entire_binding(),
-        normal_uniform_buffer.as_entire_binding(),
-        color_uniform_buffer.as_entire_binding(),
+        texture_binding_type,
+        texture_binding_type,
+        wgpu::BindingType::StorageTexture {
+          access: wgpu::StorageTextureAccess::WriteOnly,
+          format: texture_desc.format,
+          view_dimension: wgpu::TextureViewDimension::D2,
+        },
+      ],
+      &[
+        wgpu::ShaderStages::COMPUTE,
+        wgpu::ShaderStages::COMPUTE,
+        wgpu::ShaderStages::COMPUTE,
+      ],
+    );
+
+    let compute_bind_group_0 = util::create_bind_group(
+      &ctx.device,
+      &compute_bind_group_layout,
+      &[
+        wgpu::BindingResource::TextureView(
+          &image_texture.create_view(&wgpu::TextureViewDescriptor::default()),
+        ),
+        wgpu::BindingResource::TextureView(
+          &textures[0].create_view(&wgpu::TextureViewDescriptor::default()),
+        ),
+        flip_0_uniform_buffer.as_entire_binding(),
+      ],
+    );
+
+    let compute_bind_group_1 = util::create_bind_group(
+      &ctx.device,
+      &compute_bind_group_layout,
+      &[
+        wgpu::BindingResource::TextureView(
+          &textures[0].create_view(&wgpu::TextureViewDescriptor::default()),
+        ),
+        wgpu::BindingResource::TextureView(
+          &textures[1].create_view(&wgpu::TextureViewDescriptor::default()),
+        ),
+        flip_1_uniform_buffer.as_entire_binding(),
+      ],
+    );
+
+    let compute_bind_group_2 = util::create_bind_group(
+      &ctx.device,
+      &compute_bind_group_layout,
+      &[
+        wgpu::BindingResource::TextureView(
+          &textures[1].create_view(&wgpu::TextureViewDescriptor::default()),
+        ),
+        wgpu::BindingResource::TextureView(
+          &textures[0].create_view(&wgpu::TextureViewDescriptor::default()),
+        ),
+        flip_0_uniform_buffer.as_entire_binding(),
+      ],
+    );
+
+    let show_result_bind_group_layout = util::create_bind_group_layout(
+      &ctx.device,
+      &[sampler_binding_type, texture_binding_type],
+      &[wgpu::ShaderStages::FRAGMENT, wgpu::ShaderStages::FRAGMENT],
+    );
+    let show_result_bind_group = util::create_bind_group(
+      &ctx.device,
+      &show_result_bind_group_layout,
+      &[
+        wgpu::BindingResource::Sampler(&sampler),
+        wgpu::BindingResource::TextureView(
+          &textures[1].create_view(&wgpu::TextureViewDescriptor::default()),
+        ),
       ],
     );
 
@@ -159,65 +260,44 @@ impl<'a> Render<'a> for State {
     // pipeline
     //
 
-    let vertex_buffer_layout = [wgpu::VertexBufferLayout {
-      array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-      step_mode: wgpu::VertexStepMode::Vertex,
-      attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
-    }];
-
-    let pipeline_layout =
+    let fullscreen_quad_pipeline_layout =
       ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Render Pipeline Layout"),
-        bind_group_layouts: &[&vert_bind_group_layout],
+        label: Some("Fullscreen Quad Pipeline Layout"),
+        bind_group_layouts: &[&show_result_bind_group_layout],
         push_constant_ranges: &[],
       });
+    let fullscreen_quad_pipeline = RenderPipelineBuilder::new(&ctx)
+      .vs_shader(&fullscreen_quad_shader, "vs_main")
+      .fs_shader(&fullscreen_quad_shader, "fs_main")
+      .pipeline_layout(&fullscreen_quad_pipeline_layout)
+      .build();
 
-    let pipeline_builder = RenderPipelineBuilder::new(&ctx)
-      .vs_shader(&vs_shader, "vs_main")
-      .fs_shader(&fs_shader, "fs_main")
-      .pipeline_layout(&pipeline_layout)
-      .vertex_buffer_layout(&vertex_buffer_layout)
-      .enable_depth_stencil(None);
-
-    let pipeline = pipeline_builder.build();
-
-    //
-    // texture views
-    //
-
-    let msaa_texture_view = util::create_msaa_texture_view(&ctx);
-    let depth_texture_view = util::create_depth_view(&ctx);
-
-    //
-    // vertex and index buffers for objects
-    //
-
-    let shapes = instance_defs::create_object_buffers(&ctx.device);
+    let blur_pipeline_layout =
+      ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Blur Pipeline Layout"),
+        bind_group_layouts: &[
+          &compute_constants_bind_group_layout,
+          &compute_bind_group_layout,
+        ],
+        push_constant_ranges: &[],
+      });
+    let blur_pipeline = ComputePipelineBuilder::new(&ctx.device)
+      .cs_shader(&blur_shader, "cs_main")
+      .pipeline_layout(&blur_pipeline_layout)
+      .build();
 
     Self {
-      pipeline,
-      shapes,
-      vert_bind_group,
-      msaa_texture_view,
-      depth_texture_view,
-      project_mat,
-    }
-  }
+      blur_pipeline,
+      fullscreen_quad_pipeline,
+      compute_constants_bind_group,
+      compute_bind_group_0,
+      compute_bind_group_1,
+      compute_bind_group_2,
+      show_result_bind_group,
 
-  fn resize(&mut self, ctx: &mut DrawingContext<'_>, size: Size) {
-    if size.width > 0 && size.height > 0 {
-      ctx.resize(size.into());
-
-      self.project_mat = matrix::create_projection_mat(
-        size.width as f32 / size.height as f32,
-        true,
-      );
-
-      self.depth_texture_view = util::create_depth_view(ctx);
-
-      if ctx.sample_count > 1 {
-        self.msaa_texture_view = util::create_msaa_texture_view(&ctx);
-      }
+      image_size: initial.image_size,
+      iterations: initial.iterations,
+      block_dim,
     }
   }
 
@@ -225,7 +305,7 @@ impl<'a> Render<'a> for State {
     &mut self,
     encoder: &mut wgpu::CommandEncoder,
     target: RenderTarget,
-    sample_count: u32,
+    _sample_count: u32,
   ) -> Result<Option<wgpu::SurfaceTexture>, wgpu::SurfaceError> {
     let (view, frame) = match target {
       RenderTarget::Surface(surface) => {
@@ -240,66 +320,58 @@ impl<'a> Render<'a> for State {
       }
     };
 
-    let color_attach = util::create_color_attachment(&view);
-    let msaa_attach =
-      util::create_msaa_color_attachment(&view, &self.msaa_texture_view);
-    let color_attachment = if sample_count == 1 {
-      color_attach
-    } else {
-      msaa_attach
-    };
-    let depth_attachment =
-      util::create_depth_stencil_attachment(&self.depth_texture_view);
+    let mut compute_pass =
+      encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        label: Some("compute pass"),
+        ..Default::default()
+      });
 
+    compute_pass.set_pipeline(&self.blur_pipeline);
+    compute_pass.set_bind_group(0, &self.compute_constants_bind_group, &[]);
+
+    compute_pass.set_bind_group(1, &self.compute_bind_group_0, &[]);
+    compute_pass.dispatch_workgroups(
+      self.image_size.0 / self.block_dim,
+      self.image_size.1 / BATCH[1],
+      1,
+    );
+
+    compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
+    compute_pass.dispatch_workgroups(
+      self.image_size.1 / self.block_dim,
+      self.image_size.0 / BATCH[1],
+      1,
+    );
+
+    for _ in 0..self.iterations - 1 {
+      compute_pass.set_bind_group(1, &self.compute_bind_group_2, &[]);
+      compute_pass.dispatch_workgroups(
+        self.image_size.0 / self.block_dim,
+        self.image_size.1 / BATCH[1],
+        1,
+      );
+
+      compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
+      compute_pass.dispatch_workgroups(
+        self.image_size.1 / self.block_dim,
+        self.image_size.0 / BATCH[1],
+        1,
+      );
+    }
+
+    drop(compute_pass);
+
+    let color_attachment = util::create_color_attachment(&view);
     let mut render_pass =
       encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("Render Pass"),
         color_attachments: &[Some(color_attachment)],
-        depth_stencil_attachment: Some(depth_attachment),
         ..Default::default()
       });
 
-    render_pass.set_pipeline(&self.pipeline);
-    render_pass.set_bind_group(0, &self.vert_bind_group, &[]);
-
-    //
-    // draw cubes
-    //
-    render_pass.set_vertex_buffer(0, self.shapes.cube.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(
-      self.shapes.cube.index_buffer.slice(..),
-      wgpu::IndexFormat::Uint16,
-    );
-    render_pass.draw_indexed(0..self.shapes.cube.index_count, 0, 0..NUM_CUBES);
-
-    //
-    // draw spheres
-    //
-    render_pass
-      .set_vertex_buffer(0, self.shapes.sphere.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(
-      self.shapes.sphere.index_buffer.slice(..),
-      wgpu::IndexFormat::Uint16,
-    );
-    render_pass.draw_indexed(
-      0..self.shapes.sphere.index_count,
-      0,
-      NUM_CUBES..NUM_CUBES + NUM_SPHERES,
-    );
-
-    //
-    // draw tori
-    //
-    render_pass.set_vertex_buffer(0, self.shapes.torus.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(
-      self.shapes.torus.index_buffer.slice(..),
-      wgpu::IndexFormat::Uint16,
-    );
-    render_pass.draw_indexed(
-      0..self.shapes.torus.index_count,
-      0,
-      NUM_CUBES + NUM_SPHERES..NUM_CUBES + NUM_SPHERES + NUM_TORI,
-    );
+    render_pass.set_pipeline(&self.fullscreen_quad_pipeline);
+    render_pass.set_bind_group(0, &self.show_result_bind_group, &[]);
+    render_pass.draw(0..6, 0..1);
 
     drop(render_pass);
 
