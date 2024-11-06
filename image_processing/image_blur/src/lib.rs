@@ -31,7 +31,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let initial = setup();
 
-  let mut app: App<State> = App::new("image_blur", initial);
+  let mut app: App<State> =
+    App::new("image_blur", initial).with_window_size(512, 512);
   app.run()?;
 
   Ok(())
