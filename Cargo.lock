@@ -1362,11 +1362,8 @@ name = "image_blur"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "cgmath",
  "env_logger",
  "image",
- "pollster",
- "rand",
  "wgpu 22.1.0",
  "wgsim",
 ]
