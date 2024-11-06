@@ -184,12 +184,12 @@ impl<'a> Render<'a> for State {
       &ctx.device,
       &[
         texture_binding_type,
-        texture_binding_type,
         wgpu::BindingType::StorageTexture {
           access: wgpu::StorageTextureAccess::WriteOnly,
           format: texture_desc.format,
           view_dimension: wgpu::TextureViewDimension::D2,
         },
+        uniform_binding_type,
       ],
       &[
         wgpu::ShaderStages::COMPUTE,

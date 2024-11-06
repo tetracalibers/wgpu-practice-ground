@@ -10,9 +10,9 @@ struct Flip {
 @group(0) @binding(0) var samp: sampler;
 @group(0) @binding(1) var<uniform> params: BlurParams;
 
-@group(1) @binding(1) var input_tex: texture_2d<f32>;
-@group(1) @binding(2) var output_tex: texture_storage_2d<rgba8unorm, write>;
-@group(1) @binding(3) var<uniform> flip: Flip;
+@group(1) @binding(0) var input_tex: texture_2d<f32>;
+@group(1) @binding(1) var output_tex: texture_storage_2d<rgba8unorm, write>;
+@group(1) @binding(2) var<uniform> flip: Flip;
 
 var<workgroup> tile: array<array<vec3f, 128>, 4>;
 
