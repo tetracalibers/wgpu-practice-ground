@@ -332,30 +332,30 @@ impl<'a> Render<'a> for State {
 
     compute_pass.set_bind_group(1, &self.compute_bind_group_0, &[]);
     compute_pass.dispatch_workgroups(
-      self.image_size.0 / self.block_dim,
-      self.image_size.1 / BATCH[1],
+      self.image_size.0.div_ceil(self.block_dim),
+      self.image_size.1.div_ceil(BATCH[1]),
       1,
     );
 
     compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
     compute_pass.dispatch_workgroups(
-      self.image_size.1 / self.block_dim,
-      self.image_size.0 / BATCH[1],
+      self.image_size.1.div_ceil(self.block_dim),
+      self.image_size.0.div_ceil(BATCH[1]),
       1,
     );
 
     for _ in 0..self.iterations - 1 {
       compute_pass.set_bind_group(1, &self.compute_bind_group_2, &[]);
       compute_pass.dispatch_workgroups(
-        self.image_size.0 / self.block_dim,
-        self.image_size.1 / BATCH[1],
+        self.image_size.0.div_ceil(self.block_dim),
+        self.image_size.1.div_ceil(BATCH[1]),
         1,
       );
 
       compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
       compute_pass.dispatch_workgroups(
-        self.image_size.1 / self.block_dim,
-        self.image_size.0 / BATCH[1],
+        self.image_size.1.div_ceil(self.block_dim),
+        self.image_size.0.div_ceil(BATCH[1]),
         1,
       );
     }
