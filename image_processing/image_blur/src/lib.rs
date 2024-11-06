@@ -31,8 +31,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let initial = setup();
 
-  let mut app: App<State> =
-    App::new("instanced_cube_sphere_torus - base", initial);
+  let mut app: App<State> = App::new("image_blur", initial);
   app.run()?;
 
   Ok(())
