@@ -18,6 +18,10 @@ const MIN_FILTER_SIZE: u32 = 6; // BATCHより大きい必要がある
 const MAX_FILTER_SIZE: u32 = 34;
 const FILTER_SIZE_STEP: u32 = 2;
 
+const MIN_ITERATIONS: u32 = 1;
+const MAX_ITERATIONS: u32 = 10;
+const ITERATIONS_STEP: u32 = 1;
+
 fn calc_block_dim(filter_size: u32) -> u32 {
   TILE_DIM - (filter_size - 1)
 }
@@ -383,6 +387,18 @@ impl<'a> Render<'a> for State {
             MIN_FILTER_SIZE.max(self.filter_size - FILTER_SIZE_STEP);
           println!("filter size: {}", self.filter_size);
           self.need_update = true;
+          true
+        }
+        PhysicalKey::Code(KeyCode::KeyO) => {
+          self.iterations =
+            MAX_ITERATIONS.min(self.iterations + ITERATIONS_STEP);
+          println!("iterations: {}", self.iterations);
+          true
+        }
+        PhysicalKey::Code(KeyCode::KeyU) => {
+          self.iterations =
+            MIN_ITERATIONS.max(self.iterations - ITERATIONS_STEP);
+          println!("iterations: {}", self.iterations);
           true
         }
         _ => false,
