@@ -84,8 +84,8 @@ impl<'a> Render<'a> for State {
       ..Default::default()
     });
 
-    let texture_desc = wgpu::TextureDescriptor {
-      label: Some("texture"),
+    let image_texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
+      label: Some("image texture"),
       size: wgpu::Extent3d {
         width: initial.image_size.0,
         height: initial.image_size.1,
@@ -94,14 +94,12 @@ impl<'a> Render<'a> for State {
       mip_level_count: 1,
       sample_count: 1,
       dimension: wgpu::TextureDimension::D2,
-      format: wgpu::TextureFormat::Rgba8Unorm,
+      format: wgpu::TextureFormat::Rgba8UnormSrgb,
       usage: wgpu::TextureUsages::COPY_DST
-        | wgpu::TextureUsages::STORAGE_BINDING
+        | wgpu::TextureUsages::RENDER_ATTACHMENT
         | wgpu::TextureUsages::TEXTURE_BINDING,
       view_formats: &[],
-    };
-
-    let image_texture = ctx.device.create_texture(&texture_desc);
+    });
     ctx.queue.write_texture(
       image_texture.as_image_copy(),
       &initial.image.to_rgba8(),
@@ -118,7 +116,24 @@ impl<'a> Render<'a> for State {
     );
 
     let textures = (0..=1)
-      .map(|_| ctx.device.create_texture(&texture_desc))
+      .map(|_| {
+        ctx.device.create_texture(&wgpu::TextureDescriptor {
+          label: Some("texture"),
+          size: wgpu::Extent3d {
+            width: initial.image_size.0,
+            height: initial.image_size.1,
+            depth_or_array_layers: 1,
+          },
+          mip_level_count: 1,
+          sample_count: 1,
+          dimension: wgpu::TextureDimension::D2,
+          format: wgpu::TextureFormat::Rgba8Unorm,
+          usage: wgpu::TextureUsages::COPY_DST
+            | wgpu::TextureUsages::STORAGE_BINDING
+            | wgpu::TextureUsages::TEXTURE_BINDING,
+          view_formats: &[],
+        })
+      })
       .collect::<Vec<_>>();
 
     //
@@ -179,7 +194,7 @@ impl<'a> Render<'a> for State {
 
     let texture_storage_binding_type = wgpu::BindingType::StorageTexture {
       access: wgpu::StorageTextureAccess::WriteOnly,
-      format: texture_desc.format,
+      format: wgpu::TextureFormat::Rgba8Unorm,
       view_dimension: wgpu::TextureViewDimension::D2,
     };
 
