@@ -1366,6 +1366,7 @@ dependencies = [
  "image",
  "wgpu 22.1.0",
  "wgsim",
+ "winit",
 ]
 
 [[package]]
