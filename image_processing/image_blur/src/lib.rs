@@ -75,7 +75,7 @@ struct State {
   iterations: u32,
   block_dim: u32,
 
-  need_update: bool,
+  need_uniform_update: bool,
 }
 
 impl<'a> Render<'a> for State {
@@ -360,7 +360,7 @@ impl<'a> Render<'a> for State {
       filter_size: initial.filter_size,
       block_dim,
 
-      need_update: false,
+      need_uniform_update: false,
     }
   }
 
@@ -379,14 +379,14 @@ impl<'a> Render<'a> for State {
           self.filter_size =
             MAX_FILTER_SIZE.min(self.filter_size + FILTER_SIZE_STEP);
           println!("filter size: {}", self.filter_size);
-          self.need_update = true;
+          self.need_uniform_update = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyD) => {
           self.filter_size =
             MIN_FILTER_SIZE.max(self.filter_size - FILTER_SIZE_STEP);
           println!("filter size: {}", self.filter_size);
-          self.need_update = true;
+          self.need_uniform_update = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyO) => {
@@ -408,18 +408,15 @@ impl<'a> Render<'a> for State {
   }
 
   fn update(&mut self, ctx: &DrawingContext, _dt: std::time::Duration) {
-    if !self.need_update {
-      return;
+    if self.need_uniform_update {
+      self.block_dim = calc_block_dim(self.filter_size);
+      ctx.queue.write_buffer(
+        &self.blur_params_uniform_buffer,
+        0,
+        cast_slice(&[self.filter_size, self.block_dim]),
+      );
+      self.need_uniform_update = false;
     }
-
-    self.block_dim = calc_block_dim(self.filter_size);
-    ctx.queue.write_buffer(
-      &self.blur_params_uniform_buffer,
-      0,
-      cast_slice(&[self.filter_size, self.block_dim]),
-    );
-
-    self.need_update = false;
   }
 
   fn draw(
