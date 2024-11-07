@@ -116,3 +116,51 @@ impl<'a> RenderPipelineBuilder<'a> {
     })
   }
 }
+
+pub struct ComputePipelineBuilder<'a> {
+  device: &'a wgpu::Device,
+
+  pipeline_layout: Option<&'a wgpu::PipelineLayout>,
+
+  cs_shader: Option<&'a wgpu::ShaderModule>,
+  cs_entry: &'a str,
+}
+
+impl<'a> ComputePipelineBuilder<'a> {
+  pub fn new(device: &'a wgpu::Device) -> Self {
+    Self {
+      device,
+      pipeline_layout: None,
+      cs_shader: None,
+      cs_entry: "cs_main",
+    }
+  }
+
+  pub fn pipeline_layout(mut self, layout: &'a wgpu::PipelineLayout) -> Self {
+    self.pipeline_layout = Some(layout);
+    self
+  }
+
+  pub fn cs_shader(
+    mut self,
+    module: &'a wgpu::ShaderModule,
+    entry: &'a str,
+  ) -> Self {
+    self.cs_shader = Some(module);
+    self.cs_entry = entry;
+    self
+  }
+
+  pub fn build(&self) -> wgpu::ComputePipeline {
+    self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+      label: Some("Compute Pipeline"),
+      layout: self.pipeline_layout,
+
+      module: &self.cs_shader.unwrap(),
+      entry_point: &self.cs_entry,
+
+      compilation_options: wgpu::PipelineCompilationOptions::default(),
+      cache: None,
+    })
+  }
+}
