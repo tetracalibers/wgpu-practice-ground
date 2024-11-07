@@ -13,8 +13,7 @@ const TILE_DIM: u32 = 128;
 const BATCH: [u32; 2] = [4, 4];
 
 fn setup() -> Initial {
-  let img_bytes =
-    include_bytes!("../../../assets/img/stained-glass_512x512.png");
+  let img_bytes = include_bytes!("../../../assets/img/stained-glass_w600.png");
   let image = image::load_from_memory(img_bytes).unwrap();
   let image_size = image.dimensions();
 
@@ -32,7 +31,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
   let initial = setup();
 
   let mut app: App<State> =
-    App::new("image_blur", initial).with_window_size(800, 600);
+    App::new("image_blur", initial).with_window_size(600, 400);
   app.run()?;
 
   Ok(())
@@ -277,7 +276,7 @@ impl<'a> Render<'a> for State {
       ],
       &[
         wgpu::ShaderStages::FRAGMENT,
-        wgpu::ShaderStages::FRAGMENT,
+        wgpu::ShaderStages::VERTEX_FRAGMENT,
         wgpu::ShaderStages::VERTEX,
       ],
     );
