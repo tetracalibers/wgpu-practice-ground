@@ -6,15 +6,21 @@ struct VertexOutput {
   @location(0) frag_uv : vec2f,
 }
 
+const res = vec2f(800.0, 600.0);
+
+fn alignAspect(pos: vec2f) -> vec2f {
+  return pos / res * min(res.x, res.y);
+}
+
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
   var pos = array<vec2f, 6>(
-    vec2f( 1.0,  1.0),
-    vec2f( 1.0, -1.0),
-    vec2f(-1.0, -1.0),
-    vec2f( 1.0,  1.0),
-    vec2f(-1.0, -1.0),
-    vec2f(-1.0,  1.0),
+    alignAspect(vec2f( 1.0,  1.0)),
+    alignAspect(vec2f( 1.0, -1.0)),
+    alignAspect(vec2f(-1.0, -1.0)),
+    alignAspect(vec2f( 1.0,  1.0)),
+    alignAspect(vec2f(-1.0, -1.0)),
+    alignAspect(vec2f(-1.0,  1.0)),
   );
   
   var uv = array<vec2f, 6>(
