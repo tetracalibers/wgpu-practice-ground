@@ -147,6 +147,17 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
+    let resolution = ctx.resolution();
+    let resolution_uniform_buffer =
+      ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("resolution uniform buffer"),
+        contents: cast_slice(&[
+          resolution.width as f32,
+          resolution.height as f32,
+        ]),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+      });
+
     //
     // bind group
     //
@@ -244,8 +255,16 @@ impl<'a> Render<'a> for State {
 
     let show_result_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
-      &[sampler_binding_type, texture_binding_type],
-      &[wgpu::ShaderStages::FRAGMENT, wgpu::ShaderStages::FRAGMENT],
+      &[
+        sampler_binding_type,
+        texture_binding_type,
+        uniform_binding_type,
+      ],
+      &[
+        wgpu::ShaderStages::FRAGMENT,
+        wgpu::ShaderStages::FRAGMENT,
+        wgpu::ShaderStages::VERTEX,
+      ],
     );
     let show_result_bind_group = util::create_bind_group(
       &ctx.device,
@@ -255,6 +274,7 @@ impl<'a> Render<'a> for State {
         wgpu::BindingResource::TextureView(
           &textures[1].create_view(&wgpu::TextureViewDescriptor::default()),
         ),
+        resolution_uniform_buffer.as_entire_binding(),
       ],
     );
 

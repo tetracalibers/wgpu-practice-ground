@@ -1,15 +1,14 @@
 @group(0) @binding(0) var screen_sampler: sampler;
 @group(0) @binding(1) var screen_texture: texture_2d<f32>;
+@group(0) @binding(2) var<uniform> resolution: vec2f;
 
 struct VertexOutput {
   @builtin(position) position : vec4f,
   @location(0) frag_uv : vec2f,
 }
 
-const res = vec2f(800.0, 600.0);
-
 fn alignAspect(pos: vec2f) -> vec2f {
-  return pos / res * min(res.x, res.y);
+  return pos / resolution * min(resolution.x, resolution.y);
 }
 
 @vertex
