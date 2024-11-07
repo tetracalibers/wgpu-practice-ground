@@ -8,9 +8,19 @@ use wgsim::ctx::DrawingContext;
 use wgsim::ppl::{ComputePipelineBuilder, RenderPipelineBuilder};
 use wgsim::render::{Render, RenderTarget};
 use wgsim::util;
+use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::keyboard::{KeyCode, PhysicalKey};
 
 const TILE_DIM: u32 = 128;
 const BATCH: [u32; 2] = [4, 4];
+
+const MIN_FILTER_SIZE: u32 = 6; // BATCHより大きい必要がある
+const MAX_FILTER_SIZE: u32 = 34;
+const FILTER_SIZE_STEP: u32 = 2;
+
+fn calc_block_dim(filter_size: u32) -> u32 {
+  TILE_DIM - (filter_size - 1)
+}
 
 fn setup() -> Initial {
   let img_bytes = include_bytes!("../../../assets/img/stained-glass_w600.png");
@@ -47,15 +57,21 @@ struct Initial {
 struct State {
   blur_pipeline: wgpu::ComputePipeline,
   fullscreen_quad_pipeline: wgpu::RenderPipeline,
+
   compute_constants_bind_group: wgpu::BindGroup,
   compute_bind_group_0: wgpu::BindGroup,
   compute_bind_group_1: wgpu::BindGroup,
   compute_bind_group_2: wgpu::BindGroup,
   show_result_bind_group: wgpu::BindGroup,
 
+  blur_params_uniform_buffer: wgpu::Buffer,
+
   image_size: (u32, u32),
-  block_dim: u32,
+  filter_size: u32,
   iterations: u32,
+  block_dim: u32,
+
+  need_update: bool,
 }
 
 impl<'a> Render<'a> for State {
@@ -153,7 +169,8 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM,
       });
 
-    let block_dim = TILE_DIM - (initial.filter_size - 1);
+    let block_dim = calc_block_dim(initial.filter_size);
+
     let blur_params_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("blur params uniform buffer"),
@@ -325,16 +342,68 @@ impl<'a> Render<'a> for State {
     Self {
       blur_pipeline,
       fullscreen_quad_pipeline,
+
       compute_constants_bind_group,
       compute_bind_group_0,
       compute_bind_group_1,
       compute_bind_group_2,
       show_result_bind_group,
 
+      blur_params_uniform_buffer,
+
       image_size: initial.image_size,
       iterations: initial.iterations,
+      filter_size: initial.filter_size,
       block_dim,
+
+      need_update: false,
     }
+  }
+
+  fn process_event(&mut self, event: &WindowEvent) -> bool {
+    match event {
+      WindowEvent::KeyboardInput {
+        event:
+          KeyEvent {
+            physical_key,
+            state: ElementState::Pressed,
+            ..
+          },
+        ..
+      } => match physical_key {
+        PhysicalKey::Code(KeyCode::KeyG) => {
+          self.filter_size =
+            MAX_FILTER_SIZE.min(self.filter_size + FILTER_SIZE_STEP);
+          println!("filter size: {}", self.filter_size);
+          self.need_update = true;
+          true
+        }
+        PhysicalKey::Code(KeyCode::KeyD) => {
+          self.filter_size =
+            MIN_FILTER_SIZE.max(self.filter_size - FILTER_SIZE_STEP);
+          println!("filter size: {}", self.filter_size);
+          self.need_update = true;
+          true
+        }
+        _ => false,
+      },
+      _ => false,
+    }
+  }
+
+  fn update(&mut self, ctx: &DrawingContext, _dt: std::time::Duration) {
+    if !self.need_update {
+      return;
+    }
+
+    self.block_dim = calc_block_dim(self.filter_size);
+    ctx.queue.write_buffer(
+      &self.blur_params_uniform_buffer,
+      0,
+      cast_slice(&[self.filter_size, self.block_dim]),
+    );
+
+    self.need_update = false;
   }
 
   fn draw(
