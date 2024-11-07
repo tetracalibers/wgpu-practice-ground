@@ -30,6 +30,7 @@ pub struct SurfaceDrawingContext<'a> {
   pub surface: wgpu::Surface<'a>,
   pub config: wgpu::SurfaceConfiguration,
   pub size: Size,
+  pub dpi: u32,
 }
 
 #[derive(Debug)]
@@ -86,6 +87,7 @@ impl<'a> DrawingContext<'a> {
     cfg_builder: &SurfaceConfigBuilder<'a>,
   ) -> Self {
     let size = window.inner_size();
+    let dpi = window.scale_factor();
 
     let instance = wgpu::Instance::default();
     let surface =
@@ -123,6 +125,7 @@ impl<'a> DrawingContext<'a> {
         surface,
         config,
         size: size.into(),
+        dpi: dpi as u32,
       }),
       sample_count: 1,
     }
@@ -151,6 +154,19 @@ impl<'a> DrawingContext<'a> {
     match &self.ty {
       DrawingContextType::Surface(ctx) => &ctx.size,
       DrawingContextType::Texture(ctx) => &ctx.size,
+    }
+  }
+
+  pub fn resolution(&self) -> Size {
+    match &self.ty {
+      DrawingContextType::Surface(ctx) => {
+        let logical_size = Size {
+          width: ctx.size.width / ctx.dpi,
+          height: ctx.size.height / ctx.dpi,
+        };
+        logical_size
+      }
+      DrawingContextType::Texture(ctx) => ctx.size,
     }
   }
 
