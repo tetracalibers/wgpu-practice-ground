@@ -14,7 +14,7 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 const TILE_DIM: u32 = 128;
 const BATCH: [u32; 2] = [4, 4];
 
-const MIN_FILTER_SIZE: u32 = 6; // BATCHより大きい必要がある
+const MIN_FILTER_SIZE: u32 = 2;
 const MAX_FILTER_SIZE: u32 = 34;
 const FILTER_SIZE_STEP: u32 = 2;
 
