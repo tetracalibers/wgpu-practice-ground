@@ -2,6 +2,7 @@ pub mod app;
 pub mod compute;
 pub mod ctx;
 pub mod export;
+pub mod fps;
 pub mod geometry;
 pub mod matrix;
 pub mod ppl;
