@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 use winit::{dpi::PhysicalSize, window::Window};
 
@@ -22,6 +22,35 @@ impl Into<Size> for PhysicalSize<u32> {
       width: self.width,
       height: self.height,
     }
+  }
+}
+
+#[derive(Debug)]
+pub struct ComputingContext {
+  pub instance: wgpu::Instance,
+  pub adapter: wgpu::Adapter,
+  pub device: wgpu::Device,
+  pub queue: wgpu::Queue,
+}
+
+impl ComputingContext {
+  pub async fn new() -> Result<Self, Box<dyn Error>> {
+    let instance = wgpu::Instance::default();
+
+    let adapter = instance
+      .request_adapter(&wgpu::RequestAdapterOptions::default())
+      .await
+      .unwrap();
+
+    let (device, queue) =
+      adapter.request_device(&wgpu::DeviceDescriptor::default(), None).await?;
+
+    Ok(Self {
+      instance,
+      adapter,
+      device,
+      queue,
+    })
   }
 }
 
