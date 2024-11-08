@@ -2,7 +2,7 @@ use std::{error::Error, iter};
 
 use num_traits::FromBytes;
 use wgpu::util::DeviceExt;
-use wgsim::util;
+use wgsim::{ctx::ComputingContext, util};
 
 pub async fn run() -> Result<(), Box<dyn Error>> {
   env_logger::init();
@@ -18,38 +18,28 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // init wgpu
   //
 
-  let instance = wgpu::Instance::default();
-
-  let adapter = instance
-    .request_adapter(&wgpu::RequestAdapterOptions::default())
-    .await
-    .unwrap();
-
-  let (device, queue) = adapter
-    .request_device(&wgpu::DeviceDescriptor::default(), None)
-    .await
-    .unwrap();
+  let ctx = ComputingContext::new().await?;
 
   //
   // compile shader
   //
 
   let compute_shader =
-    device.create_shader_module(wgpu::include_wgsl!("./compute.wgsl"));
+    ctx.device.create_shader_module(wgpu::include_wgsl!("./compute.wgsl"));
 
   //
   // create a buffer to store data
   //
 
   let input_data_buffer =
-    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
       label: Some("Storage Buffer for input data"),
       contents: bytemuck::cast_slice(&[4, 5, 6]),
       usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
   let non_atomic_result_data_buffer =
-    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
       label: Some("Storage Buffer for result data (non atomic)"),
       contents: bytemuck::cast_slice(&[0, 0, 0]),
       usage: wgpu::BufferUsages::STORAGE
@@ -58,7 +48,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     });
 
   let atomic_result_data_buffer =
-    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
       label: Some("Storage Buffer for result data (atomic)"),
       contents: bytemuck::cast_slice(&[0, 0, 0]),
       usage: wgpu::BufferUsages::STORAGE
@@ -71,7 +61,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   //
 
   let bind_group_layout = util::create_bind_group_layout_for_buffer(
-    &device,
+    &ctx.device,
     &[
       wgpu::BufferBindingType::Storage { read_only: true }, // input
       wgpu::BufferBindingType::Storage { read_only: false }, // result (non atomic)
@@ -85,7 +75,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   );
 
   let bind_group = util::create_bind_group(
-    &device,
+    &ctx.device,
     &bind_group_layout,
     &[
       input_data_buffer.as_entire_binding(),
@@ -99,14 +89,14 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   //
 
   let pipeline_layout =
-    device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+    ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
       label: Some("Pipeline Layout"),
       bind_group_layouts: &[&bind_group_layout],
       push_constant_ranges: &[],
     });
 
   let compute_pipeline =
-    device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+    ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
       label: Some("Compute pipeline"),
       layout: Some(&pipeline_layout),
       module: &compute_shader,
@@ -119,7 +109,8 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // create command encode
   //
 
-  let mut command_encoder = device
+  let mut command_encoder = ctx
+    .device
     .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
   //
@@ -143,23 +134,27 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   // execute commands
   //
 
-  queue.submit(iter::once(command_encoder.finish()));
+  ctx.queue.submit(iter::once(command_encoder.finish()));
 
   //
   // result
   //
 
   let non_atomic_result_data: Vec<i32> = get_gpu_buffer(
-    &device,
-    &queue,
+    &ctx.device,
+    &ctx.queue,
     &non_atomic_result_data_buffer,
     buffer_size,
   )
   .await;
 
-  let atomic_result_data: Vec<i32> =
-    get_gpu_buffer(&device, &queue, &atomic_result_data_buffer, buffer_size)
-      .await;
+  let atomic_result_data: Vec<i32> = get_gpu_buffer(
+    &ctx.device,
+    &ctx.queue,
+    &atomic_result_data_buffer,
+    buffer_size,
+  )
+  .await;
 
   // アトミックロックを使用した場合は正しい結果が得られる
   // アトミックロックを使用しない場合は誤った結果が出る可能性がある（まれに正しい結果が得られることもあるが、多くの場合は失敗する）
