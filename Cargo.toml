@@ -15,6 +15,7 @@ hello-glyphon                                 = { path = "./tutorial/hello-glyph
 glyph_geometry_2d                             = { path = "./tutorial/glyph_geometry_2d" }
 compute_single_thread                         = { path = "./tutorial/compute_single_thread" }
 compute_atomic_add                            = { path = "./tutorial/compute_atomic_add" }
+compute_bitonic_sort                          = { path = "./gpgpu/compute_bitonic_sort" }
 compute_visualize_workgroup_global            = { path = "./tutorial/compute_visualize_workgroup_global" }
 compute_visualize_workgroup_local             = { path = "./tutorial/compute_visualize_workgroup_local" }
 compute_mandelbrot_set                        = { path = "./tutorial/compute_mandelbrot_set" }
@@ -52,6 +53,7 @@ members = [
   "tutorial/life-game",
   "tutorial/compute_single_thread",
   "tutorial/compute_atomic_add",
+  "gpgpu/compute_bitonic_sort",
   "tutorial/compute_visualize_workgroup_global",
   "tutorial/compute_visualize_workgroup_local",
   "tutorial/compute_mandelbrot_set",

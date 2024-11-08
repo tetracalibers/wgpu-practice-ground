@@ -30,6 +30,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     "tutorial/compute_atomic_add" => {
       Ok(pollster::block_on(compute_atomic_add::run())?)
     }
+    "gpgpu/compute_bitonic_sort" => {
+      Ok(pollster::block_on(compute_bitonic_sort::run())?)
+    }
     "tutorial/compute_visualize_workgroup_global" => Ok(pollster::block_on(
       compute_visualize_workgroup_global::run(),
     )?),

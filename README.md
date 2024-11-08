@@ -79,6 +79,10 @@ cargo run -- tutorial/compute_atomic_add
 ```
 
 ```bash
+cargo run -- gpgpu/compute_bitonic_sort
+```
+
+```bash
 cargo run -- tutorial/compute_visualize_workgroup_global
 ```
 
