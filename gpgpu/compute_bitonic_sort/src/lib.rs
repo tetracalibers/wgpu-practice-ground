@@ -2,7 +2,7 @@ use std::{error::Error, iter};
 
 use num_traits::FromBytes;
 use wgpu::util::DeviceExt;
-use wgsim::{ctx::ComputingContext, util};
+use wgsim::{ctx::ComputingContext, ppl::ComputePipelineBuilder, util};
 
 pub async fn run() -> Result<(), Box<dyn Error>> {
   env_logger::init();
@@ -95,15 +95,10 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
       push_constant_ranges: &[],
     });
 
-  let compute_pipeline =
-    ctx.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-      label: Some("Compute pipeline"),
-      layout: Some(&pipeline_layout),
-      module: &compute_shader,
-      entry_point: "cs_main",
-      compilation_options: wgpu::PipelineCompilationOptions::default(),
-      cache: None,
-    });
+  let compute_pipeline = ComputePipelineBuilder::new(&ctx.device)
+    .cs_shader(&compute_shader, "cs_main")
+    .pipeline_layout(&pipeline_layout)
+    .build();
 
   //
   // create command encode
