@@ -1,91 +1,91 @@
 use std::{error::Error, iter};
 
 use num_traits::FromBytes;
-use wgpu::util::DeviceExt;
+use rand::Rng;
 use wgsim::{ctx::ComputingContext, ppl::ComputePipelineBuilder, util};
+
+const ARRAY_SIZE: usize = 128;
 
 pub async fn run() -> Result<(), Box<dyn Error>> {
   env_logger::init();
 
   //
-  // define constants
+  // data
   //
 
-  // std::mem::size_of::<i32>()で求められるが、ハードコーディングしてしまう
-  let buffer_size = 4;
+  let rng = &mut rand::thread_rng();
+  let random_numbers: Vec<i32> =
+    (0..ARRAY_SIZE).map(|_| rng.gen_range(1..=100)).collect();
+
+  println!("before: {:?}", random_numbers);
 
   //
-  // init wgpu
+  // wgpu
   //
 
   let ctx = ComputingContext::new().await?;
 
   //
-  // compile shader
+  // shader
   //
 
   let compute_shader =
     ctx.device.create_shader_module(wgpu::include_wgsl!("./compute.wgsl"));
 
   //
-  // create a buffer to store data
+  // buffer
   //
 
-  let input_data_buffer =
-    ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-      label: Some("Storage Buffer for input data"),
-      contents: bytemuck::cast_slice(&[4, 5, 6]),
-      usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-    });
+  let buffer_size = ARRAY_SIZE * std::mem::size_of::<i32>();
 
-  let non_atomic_result_data_buffer =
-    ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-      label: Some("Storage Buffer for result data (non atomic)"),
-      contents: bytemuck::cast_slice(&[0, 0, 0]),
-      usage: wgpu::BufferUsages::STORAGE
-        | wgpu::BufferUsages::COPY_DST
-        | wgpu::BufferUsages::COPY_SRC,
-    });
+  let input_data_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+    label: Some("input_data_buffer"),
+    size: buffer_size as u64,
+    usage: wgpu::BufferUsages::STORAGE
+      | wgpu::BufferUsages::COPY_DST
+      | wgpu::BufferUsages::COPY_SRC,
+    mapped_at_creation: false,
+  });
+  ctx.queue.write_buffer(
+    &input_data_buffer,
+    0,
+    bytemuck::cast_slice(&random_numbers),
+  );
 
-  let atomic_result_data_buffer =
-    ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-      label: Some("Storage Buffer for result data (atomic)"),
-      contents: bytemuck::cast_slice(&[0, 0, 0]),
-      usage: wgpu::BufferUsages::STORAGE
-        | wgpu::BufferUsages::COPY_DST
-        | wgpu::BufferUsages::COPY_SRC,
-    });
+  let result_data_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+    label: Some("result_data_buffer"),
+    size: buffer_size as u64,
+    usage: wgpu::BufferUsages::STORAGE
+      | wgpu::BufferUsages::COPY_DST
+      | wgpu::BufferUsages::COPY_SRC,
+    mapped_at_creation: false,
+  });
+
+  let readback_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+    label: Some("readback_buffer"),
+    size: buffer_size as u64,
+    usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+    mapped_at_creation: false,
+  });
 
   //
-  // create bind_group
+  // bind_group
   //
 
   let bind_group_layout = util::create_bind_group_layout_for_buffer(
     &ctx.device,
-    &[
-      wgpu::BufferBindingType::Storage { read_only: true }, // input
-      wgpu::BufferBindingType::Storage { read_only: false }, // result (non atomic)
-      wgpu::BufferBindingType::Storage { read_only: false }, // result (atomic)
-    ],
-    &[
-      wgpu::ShaderStages::COMPUTE,
-      wgpu::ShaderStages::COMPUTE,
-      wgpu::ShaderStages::COMPUTE,
-    ],
+    &[wgpu::BufferBindingType::Storage { read_only: false }],
+    &[wgpu::ShaderStages::COMPUTE],
   );
 
   let bind_group = util::create_bind_group(
     &ctx.device,
     &bind_group_layout,
-    &[
-      input_data_buffer.as_entire_binding(),
-      non_atomic_result_data_buffer.as_entire_binding(),
-      atomic_result_data_buffer.as_entire_binding(),
-    ],
+    &[input_data_buffer.as_entire_binding()],
   );
 
   //
-  // create compute_pipeline
+  // compute_pipeline
   //
 
   let pipeline_layout =
@@ -101,29 +101,46 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     .build();
 
   //
-  // create command encode
+  // compute command
   //
 
   let mut command_encoder = ctx
     .device
     .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-  //
-  // encode compute pass
-  //
-
   let mut compute_pass_encoder =
     command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-      label: Some("Compute Pass"),
+      label: Some("compute_pass_encoder"),
       timestamp_writes: None,
     });
 
   compute_pass_encoder.set_pipeline(&compute_pipeline);
   compute_pass_encoder.set_bind_group(0, &bind_group, &[]);
-  // シェーダーのローカルワークグループは `8`に設定されているため、必要なのは 1つのワークグループだけ
-  compute_pass_encoder.dispatch_workgroups(1, 1, 1);
+
+  let dispatch_dim = (ARRAY_SIZE / 64) as u32;
+  compute_pass_encoder.dispatch_workgroups(dispatch_dim, 1, 1);
 
   drop(compute_pass_encoder);
+
+  //
+  // copy command
+  //
+
+  command_encoder.copy_buffer_to_buffer(
+    &input_data_buffer,
+    0,
+    &result_data_buffer,
+    0,
+    buffer_size as u64,
+  );
+
+  command_encoder.copy_buffer_to_buffer(
+    &result_data_buffer,
+    0,
+    &readback_buffer,
+    0,
+    buffer_size as u64,
+  );
 
   //
   // execute commands
@@ -132,94 +149,41 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   ctx.queue.submit(iter::once(command_encoder.finish()));
 
   //
-  // result
+  // read buffer
   //
 
-  let non_atomic_result_data: Vec<i32> = get_gpu_buffer(
-    &ctx.device,
-    &ctx.queue,
-    &non_atomic_result_data_buffer,
-    buffer_size,
-  )
-  .await;
+  let data: Vec<i32> = read_gpu_buffer(&ctx.device, &readback_buffer).await?;
 
-  let atomic_result_data: Vec<i32> = get_gpu_buffer(
-    &ctx.device,
-    &ctx.queue,
-    &atomic_result_data_buffer,
-    buffer_size,
-  )
-  .await;
-
-  // アトミックロックを使用した場合は正しい結果が得られる
-  // アトミックロックを使用しない場合は誤った結果が出る可能性がある（まれに正しい結果が得られることもあるが、多くの場合は失敗する）
-  println!("  no atomic array contents: {:?}", non_atomic_result_data);
-  println!("with atomic array contents: {:?}", atomic_result_data);
+  println!("after: {:?}", data);
 
   Ok(())
 }
 
-async fn get_gpu_buffer<T>(
+async fn read_gpu_buffer<T>(
   device: &wgpu::Device,
-  queue: &wgpu::Queue,
-  src_buffer: &wgpu::Buffer,
-  buffer_size: u64,
-) -> Vec<T>
+  readback_buffer: &wgpu::Buffer,
+) -> Result<Vec<T>, Box<dyn Error>>
 where
   T: FromBytes<Bytes = [u8; 4]>,
 {
-  let tmp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-    label: Some("tmp_buffer"),
-    size: buffer_size,
-    usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-    mapped_at_creation: false,
-  });
-
-  let mut command_encoder =
-    device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-      label: Some("command_encoder for tmp"),
-    });
-
-  //
-  // Encode commands for copying buffer to buffer
-  //
-
-  command_encoder.copy_buffer_to_buffer(
-    &src_buffer,
-    0,
-    &tmp_buffer,
-    0,
-    buffer_size,
-  );
-
-  //
-  // Submit GPU commands
-  //
-
-  queue.submit(iter::once(command_encoder.finish()));
-
-  //
-  // Read buffer
-  //
-
-  let buffer_slice = tmp_buffer.slice(..);
+  let buffer_slice = readback_buffer.slice(..);
 
   let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
   buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
     tx.send(result).unwrap();
   });
   device.poll(wgpu::Maintain::Wait);
-  rx.receive().await.unwrap().unwrap();
+  rx.receive().await.unwrap()?;
 
   let data_view = buffer_slice.get_mapped_range();
 
   let data = data_view
-    .chunks_exact(buffer_size as usize)
-    .map(|b| FromBytes::from_ne_bytes(&b.try_into().unwrap()))
+    .chunks_exact(std::mem::size_of::<T>())
+    .map(|b| T::from_ne_bytes(&b.try_into().unwrap()))
     .collect::<Vec<T>>();
 
   drop(data_view);
-  tmp_buffer.unmap();
+  readback_buffer.unmap();
 
-  data
+  Ok(data)
 }
