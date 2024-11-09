@@ -1358,6 +1358,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "image_averaging_filter"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "image",
+ "wgpu 22.1.0",
+ "wgsim",
+ "winit",
+]
+
+[[package]]
 name = "image_blur"
 version = "0.1.0"
 dependencies = [
@@ -3673,6 +3685,7 @@ dependencies = [
  "empty_window",
  "glyph_geometry_2d",
  "hello-glyphon",
+ "image_averaging_filter",
  "image_blur",
  "instanced_cube_sphere_torus_base",
  "instanced_cube_sphere_torus_direction_light_1",
