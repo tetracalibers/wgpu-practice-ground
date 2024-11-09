@@ -607,6 +607,7 @@ dependencies = [
  "env_logger",
  "futures-intrusive",
  "num-traits",
+ "rand",
  "wgpu 22.1.0",
  "wgsim",
 ]

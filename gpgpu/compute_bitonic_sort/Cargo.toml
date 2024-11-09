@@ -10,3 +10,4 @@ wgsim             = { path = "../../lib/wgsim" }
 futures-intrusive = "0.5.0"
 bytemuck          = "1.19.0"
 num-traits        = "0.2.19"
+rand              = "0.8.5"
