@@ -69,39 +69,75 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
   });
 
   //
+  // uniform
+  //
+
+  let global_merge_uniform_buffer =
+    ctx.device.create_buffer(&wgpu::BufferDescriptor {
+      label: Some("global_merge_uniform_buffer"),
+      size: std::mem::size_of::<u32>() as u64 * 2,
+      usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+      mapped_at_creation: false,
+    });
+
+  //
   // bind_group
   //
 
-  let bind_group_layout = util::create_bind_group_layout_for_buffer(
+  let common_data_bind_group_layout = util::create_bind_group_layout_for_buffer(
     &ctx.device,
     &[wgpu::BufferBindingType::Storage { read_only: false }],
     &[wgpu::ShaderStages::COMPUTE],
   );
-
-  let bind_group = util::create_bind_group(
+  let common_data_bind_group = util::create_bind_group(
     &ctx.device,
-    &bind_group_layout,
+    &common_data_bind_group_layout,
     &[input_data_buffer.as_entire_binding()],
+  );
+
+  let global_merge_params_bind_group_layout =
+    util::create_bind_group_layout_for_buffer(
+      &ctx.device,
+      &[wgpu::BufferBindingType::Uniform],
+      &[wgpu::ShaderStages::COMPUTE],
+    );
+  let global_merge_params_bind_group = util::create_bind_group(
+    &ctx.device,
+    &global_merge_params_bind_group_layout,
+    &[global_merge_uniform_buffer.as_entire_binding()],
   );
 
   //
   // compute_pipeline
   //
 
-  let pipeline_layout =
+  let local_sort_pipeline_layout =
     ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Pipeline Layout"),
-      bind_group_layouts: &[&bind_group_layout],
+      label: Some("local_sort_pipeline_layout"),
+      bind_group_layouts: &[&common_data_bind_group_layout],
       push_constant_ranges: &[],
     });
+  let local_sort_pipeline = ComputePipelineBuilder::new(&ctx.device)
+    .cs_shader(&compute_shader, "local_sort")
+    .pipeline_layout(&local_sort_pipeline_layout)
+    .build();
 
-  let compute_pipeline = ComputePipelineBuilder::new(&ctx.device)
-    .cs_shader(&compute_shader, "cs_main")
-    .pipeline_layout(&pipeline_layout)
+  let global_merge_pipeline_layout =
+    ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+      label: Some("global_merge_pipeline_layout"),
+      bind_group_layouts: &[
+        &common_data_bind_group_layout,
+        &global_merge_params_bind_group_layout,
+      ],
+      push_constant_ranges: &[],
+    });
+  let global_merge_pipeline = ComputePipelineBuilder::new(&ctx.device)
+    .cs_shader(&compute_shader, "global_merge")
+    .pipeline_layout(&global_merge_pipeline_layout)
     .build();
 
   //
-  // compute command
+  // encoder
   //
 
   let mut command_encoder = ctx
@@ -114,11 +150,41 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
       timestamp_writes: None,
     });
 
-  compute_pass_encoder.set_pipeline(&compute_pipeline);
-  compute_pass_encoder.set_bind_group(0, &bind_group, &[]);
+  //
+  // compute - local sort
+  //
 
-  let dispatch_dim = (ARRAY_SIZE / 64) as u32;
-  compute_pass_encoder.dispatch_workgroups(dispatch_dim, 1, 1);
+  let local_size = 64;
+  let num_groups = (ARRAY_SIZE + (local_size - 1)) / local_size;
+
+  compute_pass_encoder.set_pipeline(&local_sort_pipeline);
+  compute_pass_encoder.set_bind_group(0, &common_data_bind_group, &[]);
+  compute_pass_encoder.dispatch_workgroups(num_groups as u32, 1, 1);
+
+  //
+  // compute - global merge
+  //
+
+  let stages = (ARRAY_SIZE as f32).log2().ceil() as u32;
+
+  for stage in 0..=stages {
+    for substage in (0..=stage).rev() {
+      ctx.queue.write_buffer(
+        &global_merge_uniform_buffer,
+        0,
+        bytemuck::cast_slice(&[stage, substage]),
+      );
+
+      compute_pass_encoder.set_pipeline(&global_merge_pipeline);
+      compute_pass_encoder.set_bind_group(0, &common_data_bind_group, &[]);
+      compute_pass_encoder.set_bind_group(
+        1,
+        &global_merge_params_bind_group,
+        &[],
+      );
+      compute_pass_encoder.dispatch_workgroups(num_groups as u32, 1, 1);
+    }
+  }
 
   drop(compute_pass_encoder);
 
