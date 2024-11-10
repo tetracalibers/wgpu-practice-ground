@@ -99,6 +99,10 @@ cargo run -- image_processing/image_blur
 ```
 
 ```bash
+cargo run -- image_processing/image_average_filter
+```
+
+```bash
 cargo run -- instanced_cube_sphere_torus/base
 ```
 
