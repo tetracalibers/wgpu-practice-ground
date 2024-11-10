@@ -11,19 +11,20 @@ use wgsim::util;
 use winit::event::{ElementState, KeyEvent, WindowEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
-const TILE_DIM: u32 = 128;
-const BATCH: [u32; 2] = [4, 4];
+const TILE_SIZE: u32 = 4;
+const WORKGROUP_SIZE: u32 = 32;
+const CACHE_SIZE: u32 = TILE_SIZE * WORKGROUP_SIZE;
 
-const MIN_FILTER_SIZE: u32 = 2;
-const MAX_FILTER_SIZE: u32 = 34;
-const FILTER_SIZE_STEP: u32 = 2;
+const MIN_KERNEL_SIZE: u32 = 3;
+const MAX_KERNEL_SIZE: u32 = 33;
+const KERNEL_SIZE_STEP: u32 = 2;
 
 const MIN_ITERATIONS: u32 = 1;
 const MAX_ITERATIONS: u32 = 10;
 const ITERATIONS_STEP: u32 = 1;
 
-fn calc_block_dim(filter_size: u32) -> u32 {
-  TILE_DIM - (filter_size - 1)
+fn calc_dispatch_size(kernel_size: u32) -> u32 {
+  CACHE_SIZE - (kernel_size - 1)
 }
 
 fn setup() -> Initial {
@@ -34,7 +35,7 @@ fn setup() -> Initial {
   Initial {
     image,
     image_size,
-    filter_size: 8,
+    kernel_size: 3,
     iterations: 2,
   }
 }
@@ -44,8 +45,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let initial = setup();
 
-  let mut app: App<State> =
-    App::new("image_blur", initial).with_window_size(600, 400);
+  let mut app: App<State> = App::new("image_averaging_filter", initial);
   app.run()?;
 
   Ok(())
@@ -54,7 +54,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 struct Initial {
   image: image::DynamicImage,
   image_size: (u32, u32),
-  filter_size: u32,
+  kernel_size: u32,
   iterations: u32,
 }
 
@@ -72,11 +72,11 @@ struct State {
   resolution_uniform_buffer: wgpu::Buffer,
 
   image_size: (u32, u32),
-  filter_size: u32,
+  kernel_size: u32,
   iterations: u32,
 
-  block_dim: u32,
-  block_dim_updated: bool,
+  dispatch_size: u32,
+  dispatch_size_updated: bool,
 
   resolution_updated: bool,
 }
@@ -176,12 +176,12 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM,
       });
 
-    let block_dim = calc_block_dim(initial.filter_size);
+    let dispatch_size = calc_dispatch_size(initial.kernel_size);
 
     let blur_params_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("blur params uniform buffer"),
-        contents: cast_slice(&[initial.filter_size, block_dim]),
+        contents: cast_slice(&[initial.kernel_size, dispatch_size]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
@@ -362,10 +362,10 @@ impl<'a> Render<'a> for State {
 
       image_size: initial.image_size,
       iterations: initial.iterations,
-      filter_size: initial.filter_size,
+      kernel_size: initial.kernel_size,
 
-      block_dim,
-      block_dim_updated: false,
+      dispatch_size,
+      dispatch_size_updated: false,
 
       resolution_updated: false,
     }
@@ -390,17 +390,17 @@ impl<'a> Render<'a> for State {
         ..
       } => match physical_key {
         PhysicalKey::Code(KeyCode::KeyG) => {
-          self.filter_size =
-            MAX_FILTER_SIZE.min(self.filter_size + FILTER_SIZE_STEP);
-          println!("filter size: {}", self.filter_size);
-          self.block_dim_updated = true;
+          self.kernel_size =
+            MAX_KERNEL_SIZE.min(self.kernel_size + KERNEL_SIZE_STEP);
+          println!("filter size: {}", self.kernel_size);
+          self.dispatch_size_updated = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyD) => {
-          self.filter_size =
-            MIN_FILTER_SIZE.max(self.filter_size - FILTER_SIZE_STEP);
-          println!("filter size: {}", self.filter_size);
-          self.block_dim_updated = true;
+          self.kernel_size =
+            MIN_KERNEL_SIZE.max(self.kernel_size - KERNEL_SIZE_STEP);
+          println!("filter size: {}", self.kernel_size);
+          self.dispatch_size_updated = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyO) => {
@@ -422,14 +422,14 @@ impl<'a> Render<'a> for State {
   }
 
   fn update(&mut self, ctx: &DrawingContext, _dt: std::time::Duration) {
-    if self.block_dim_updated {
-      self.block_dim = calc_block_dim(self.filter_size);
+    if self.dispatch_size_updated {
+      self.dispatch_size = calc_dispatch_size(self.kernel_size);
       ctx.queue.write_buffer(
         &self.blur_params_uniform_buffer,
         0,
-        cast_slice(&[self.filter_size, self.block_dim]),
+        cast_slice(&[self.kernel_size, self.dispatch_size]),
       );
-      self.block_dim_updated = false;
+      self.dispatch_size_updated = false;
     }
 
     if self.resolution_updated {
@@ -473,30 +473,30 @@ impl<'a> Render<'a> for State {
 
     compute_pass.set_bind_group(1, &self.compute_bind_group_0, &[]);
     compute_pass.dispatch_workgroups(
-      self.image_size.0.div_ceil(self.block_dim),
-      self.image_size.1.div_ceil(BATCH[1]),
+      self.image_size.0.div_ceil(self.dispatch_size),
+      self.image_size.1.div_ceil(TILE_SIZE),
       1,
     );
 
     compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
     compute_pass.dispatch_workgroups(
-      self.image_size.1.div_ceil(self.block_dim),
-      self.image_size.0.div_ceil(BATCH[1]),
+      self.image_size.1.div_ceil(self.dispatch_size),
+      self.image_size.0.div_ceil(TILE_SIZE),
       1,
     );
 
     for _ in 0..self.iterations - 1 {
       compute_pass.set_bind_group(1, &self.compute_bind_group_2, &[]);
       compute_pass.dispatch_workgroups(
-        self.image_size.0.div_ceil(self.block_dim),
-        self.image_size.1.div_ceil(BATCH[1]),
+        self.image_size.0.div_ceil(self.dispatch_size),
+        self.image_size.1.div_ceil(TILE_SIZE),
         1,
       );
 
       compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
       compute_pass.dispatch_workgroups(
-        self.image_size.1.div_ceil(self.block_dim),
-        self.image_size.0.div_ceil(BATCH[1]),
+        self.image_size.1.div_ceil(self.dispatch_size),
+        self.image_size.0.div_ceil(TILE_SIZE),
         1,
       );
     }
