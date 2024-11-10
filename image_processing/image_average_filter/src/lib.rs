@@ -36,7 +36,7 @@ fn setup() -> Initial {
     image,
     image_size,
     kernel_size: 3,
-    iterations: 2,
+    iterations: 1,
   }
 }
 
