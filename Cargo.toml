@@ -21,6 +21,7 @@ compute_mandelbrot_set                        = { path = "./tutorial/compute_man
 shader_step_rect                              = { path = "./shader_art/shader_step_rect" }
 image_blur                                    = { path = "./image_processing/image_blur" }
 image_average_filter                          = { path = "./image_processing/image_average_filter" }
+image_gaussian_filter                         = { path = "./image_processing/image_gaussian_filter" }
 rect-renderer                                 = { path = "./prototype/rect-renderer" }
 text-renderer                                 = { path = "./prototype/text-renderer" }
 with_gif                                      = { path = "./prototype/with_gif" }
@@ -60,6 +61,7 @@ members = [
   "shader_art/shader_step_rect",
   "image_processing/image_blur",
   "image_processing/image_average_filter",
+  "image_processing/image_gaussian_filter",
   "practice/cube_blinn_phong",
   "practice/rotate_cube_basic",
   "instanced_cube_sphere_torus/base",
