@@ -164,15 +164,15 @@ impl<'a> Render<'a> for State {
 
     // 横ブラーと縦ブラーの切り替え用
     // 1つのバッファで管理し、切り替え時にバッファに書き込むよりも、最初から2つのバッファを用意しておいたほうが効率的
-    let flip_0_uniform_buffer =
+    let flip_blur_dir_0_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("flip uniform buffer with 0"),
+        label: Some("flip blur direction uniform buffer with 0"),
         contents: cast_slice(&[0u32]),
         usage: wgpu::BufferUsages::UNIFORM,
       });
-    let flip_1_uniform_buffer =
+    let flip_blur_dir_1_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("flip uniform buffer with 1"),
+        label: Some("flip blur direction uniform buffer with 1"),
         contents: cast_slice(&[1u32]),
         usage: wgpu::BufferUsages::UNIFORM,
       });
@@ -260,7 +260,7 @@ impl<'a> Render<'a> for State {
         wgpu::BindingResource::TextureView(
           &textures[0].create_view(&wgpu::TextureViewDescriptor::default()),
         ),
-        flip_0_uniform_buffer.as_entire_binding(),
+        flip_blur_dir_0_uniform_buffer.as_entire_binding(),
       ],
     );
 
@@ -274,7 +274,7 @@ impl<'a> Render<'a> for State {
         wgpu::BindingResource::TextureView(
           &textures[1].create_view(&wgpu::TextureViewDescriptor::default()),
         ),
-        flip_1_uniform_buffer.as_entire_binding(),
+        flip_blur_dir_1_uniform_buffer.as_entire_binding(),
       ],
     );
 
@@ -288,7 +288,7 @@ impl<'a> Render<'a> for State {
         wgpu::BindingResource::TextureView(
           &textures[0].create_view(&wgpu::TextureViewDescriptor::default()),
         ),
-        flip_0_uniform_buffer.as_entire_binding(),
+        flip_blur_dir_0_uniform_buffer.as_entire_binding(),
       ],
     );
 

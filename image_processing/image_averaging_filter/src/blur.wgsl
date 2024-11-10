@@ -2,10 +2,6 @@ struct BlurParams {
   kernel_size: u32,
 }
 
-struct Flip {
-  value: u32,
-}
-
 // スレッド数
 const workgroup_size = 32u;
 
@@ -24,7 +20,7 @@ var<workgroup> cache: array<array<vec3f, 128>, 4>;
 
 @group(1) @binding(0) var input_tex: texture_2d<f32>;
 @group(1) @binding(1) var output_tex: texture_storage_2d<rgba8unorm, write>;
-@group(1) @binding(2) var<uniform> flip: Flip;
+@group(1) @binding(2) var<uniform> flip_blur_dir: u32; // 0 or 1
 
 struct CsInput {
   @builtin(workgroup_id) workgroup_id: vec3u,
@@ -65,7 +61,7 @@ fn cs_main(in: CsInput) {
     for (var c = 0u; c < tile_size; c++) {
       var load_index = base_index + vec2u(c, r);
       
-      if (flip.value != 0u) {
+      if (flip_blur_dir != 0u) {
         load_index = load_index.yx;
       }
       
@@ -87,7 +83,7 @@ fn cs_main(in: CsInput) {
     for (var c = 0u; c < tile_size; c++) {
       var write_index = base_index + vec2u(c, r);
       
-      if (flip.value != 0u) {
+      if (flip_blur_dir != 0u) {
         write_index = write_index.yx;
       }
     
