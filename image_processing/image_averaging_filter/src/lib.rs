@@ -162,13 +162,14 @@ impl<'a> Render<'a> for State {
     // uniform
     //
 
+    // 横ブラーと縦ブラーの切り替え用
+    // 1つのバッファで管理し、切り替え時にバッファに書き込むよりも、最初から2つのバッファを用意しておいたほうが効率的
     let flip_0_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("flip uniform buffer with 0"),
         contents: cast_slice(&[0u32]),
         usage: wgpu::BufferUsages::UNIFORM,
       });
-
     let flip_1_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("flip uniform buffer with 1"),
@@ -176,6 +177,7 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM,
       });
 
+    // 特定のキー入力イベントで更新する必要がある
     let blur_params_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("blur params uniform buffer"),
@@ -183,8 +185,8 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
+    // リサイズのたびに更新する必要がある
     let resolution = ctx.resolution();
-
     let resolution_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("resolution uniform buffer"),
