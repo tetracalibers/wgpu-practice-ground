@@ -1358,7 +1358,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "image_averaging_filter"
+name = "image_average_filter"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
@@ -3685,7 +3685,7 @@ dependencies = [
  "empty_window",
  "glyph_geometry_2d",
  "hello-glyphon",
- "image_averaging_filter",
+ "image_average_filter",
  "image_blur",
  "instanced_cube_sphere_torus_base",
  "instanced_cube_sphere_torus_direction_light_1",

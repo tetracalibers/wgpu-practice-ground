@@ -1,5 +1,5 @@
 [package]
-name    = "image_averaging_filter"
+name    = "image_average_filter"
 version = "0.1.0"
 edition = "2021"
 

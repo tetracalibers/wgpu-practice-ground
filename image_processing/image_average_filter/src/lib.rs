@@ -45,7 +45,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let initial = setup();
 
-  let mut app: App<State> = App::new("image_averaging_filter", initial);
+  let mut app: App<State> = App::new("image_average_filter", initial);
   app.run()?;
 
   Ok(())
