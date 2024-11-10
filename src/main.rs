@@ -44,6 +44,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     "image_processing/image_blur" => Ok(image_blur::run()?),
     "image_processing/image_average_filter" => Ok(image_average_filter::run()?),
+    "image_processing/image_gaussian_filter" => {
+      Ok(image_gaussian_filter::run()?)
+    }
     "prototype/rect-renderer" => rect_renderer::run(),
     "prototype/text-renderer" => text_renderer::proto(),
     "prototype/with_gif" => Ok(with_gif::run("with_gif")?),

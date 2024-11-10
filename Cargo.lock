@@ -1382,6 +1382,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "image_gaussian_filter"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "env_logger",
+ "image",
+ "wgpu 22.1.0",
+ "wgsim",
+ "winit",
+]
+
+[[package]]
 name = "imgref"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3687,6 +3699,7 @@ dependencies = [
  "hello-glyphon",
  "image_average_filter",
  "image_blur",
+ "image_gaussian_filter",
  "instanced_cube_sphere_torus_base",
  "instanced_cube_sphere_torus_direction_light_1",
  "instanced_cube_sphere_torus_direction_light_2",

@@ -1,0 +1,12 @@
+[package]
+name    = "image_gaussian_filter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck   = "1.19.0"
+env_logger = "0.11.5"
+wgpu       = "22.1.0"
+wgsim      = { path = "../../lib/wgsim" }
+image      = "0.25.5"
+winit      = "0.30.5"
