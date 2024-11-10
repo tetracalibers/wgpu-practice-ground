@@ -23,6 +23,10 @@ const MIN_ITERATIONS: u32 = 1;
 const MAX_ITERATIONS: u32 = 10;
 const ITERATIONS_STEP: u32 = 1;
 
+const MIN_SIGMA: u32 = 1;
+const MAX_SIGMA: u32 = 5;
+const SIGMA_STEP: u32 = 1;
+
 fn calc_dispatch_size(kernel_size: u32) -> u32 {
   CACHE_SIZE - (kernel_size - 1)
 }
@@ -36,7 +40,8 @@ fn setup() -> Initial {
     image,
     image_size,
     kernel_size: 3,
-    iterations: 2,
+    sigma: 2,
+    iterations: 1,
   }
 }
 
@@ -45,7 +50,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
   let initial = setup();
 
-  let mut app: App<State> = App::new("image_average_filter", initial);
+  let mut app: App<State> = App::new("image_gaussian_filter", initial);
   app.run()?;
 
   Ok(())
@@ -55,6 +60,7 @@ struct Initial {
   image: image::DynamicImage,
   image_size: (u32, u32),
   kernel_size: u32,
+  sigma: u32,
   iterations: u32,
 }
 
@@ -76,7 +82,8 @@ struct State {
 
   dispatch_size: u32,
   kernel_size: u32,
-  kernel_size_updated: bool,
+  sigma: u32,
+  blur_params_updated: bool,
 
   resolution_updated: bool,
 }
@@ -182,7 +189,7 @@ impl<'a> Render<'a> for State {
     let blur_params_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("blur params uniform buffer"),
-        contents: cast_slice(&[initial.kernel_size]),
+        contents: cast_slice(&[initial.kernel_size, initial.sigma]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
@@ -368,7 +375,8 @@ impl<'a> Render<'a> for State {
 
       dispatch_size: calc_dispatch_size(initial.kernel_size),
       kernel_size: initial.kernel_size,
-      kernel_size_updated: false,
+      sigma: initial.sigma,
+      blur_params_updated: false,
 
       resolution_updated: false,
     }
@@ -392,18 +400,30 @@ impl<'a> Render<'a> for State {
           },
         ..
       } => match physical_key {
+        PhysicalKey::Code(KeyCode::KeyD) => {
+          self.sigma = MAX_SIGMA.min(self.sigma + SIGMA_STEP);
+          println!("sigma: {}", self.sigma);
+          self.blur_params_updated = true;
+          true
+        }
+        PhysicalKey::Code(KeyCode::KeyA) => {
+          self.sigma = MIN_SIGMA.max(self.sigma - SIGMA_STEP);
+          println!("sigma: {}", self.sigma);
+          self.blur_params_updated = true;
+          true
+        }
         PhysicalKey::Code(KeyCode::KeyL) => {
           self.kernel_size =
             MAX_KERNEL_SIZE.min(self.kernel_size + KERNEL_SIZE_STEP);
           println!("kernel size: {}", self.kernel_size);
-          self.kernel_size_updated = true;
+          self.blur_params_updated = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyJ) => {
           self.kernel_size =
             MIN_KERNEL_SIZE.max(self.kernel_size - KERNEL_SIZE_STEP);
           println!("kernel size: {}", self.kernel_size);
-          self.kernel_size_updated = true;
+          self.blur_params_updated = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyO) => {
@@ -425,14 +445,14 @@ impl<'a> Render<'a> for State {
   }
 
   fn update(&mut self, ctx: &DrawingContext, _dt: std::time::Duration) {
-    if self.kernel_size_updated {
+    if self.blur_params_updated {
       self.dispatch_size = calc_dispatch_size(self.kernel_size);
       ctx.queue.write_buffer(
         &self.blur_params_uniform_buffer,
         0,
-        cast_slice(&[self.kernel_size]),
+        cast_slice(&[self.kernel_size, self.sigma]),
       );
-      self.kernel_size_updated = false;
+      self.blur_params_updated = false;
     }
 
     if self.resolution_updated {

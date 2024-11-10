@@ -1,5 +1,14 @@
 struct BlurParams {
   kernel_size: u32,
+  sigma: u32,
+}
+
+const PI = 3.14159265359;
+
+fn gaussian(d: f32, sigma: u32) -> f32 {
+  let s = f32(sigma);
+  let a = 1.0 / (sqrt(2.0 * PI) * s);
+  return a * exp(-d * d / (2.0 * s * s));
 }
 
 // スレッド数
@@ -16,7 +25,7 @@ const cache_size = tile_size * workgroup_size; // 128
 var<workgroup> cache: array<array<vec3f, 128>, 4>;
 
 @group(0) @binding(0) var samp: sampler;
-@group(0) @binding(1) var<uniform> params: BlurParams;
+@group(0) @binding(1) var<uniform> blur_params: BlurParams;
 
 @group(1) @binding(0) var input_tex: texture_2d<f32>;
 @group(1) @binding(1) var output_tex: texture_storage_2d<rgba8unorm, write>;
@@ -36,7 +45,7 @@ fn cs_main(in: CsInput) {
   // テクスチャの寸法
   let dims = vec2u(textureDimensions(input_tex, 0));
   
-  let kernel_size = params.kernel_size;
+  let kernel_size = blur_params.kernel_size;
   
   // キャッシュには、ディスパッチエリア内でカーネルを正しく評価するために必要な境界ピクセルも含める必要がある
   let dispatch_size = vec2u(cache_size - (kernel_size - 1), 4u);
@@ -92,9 +101,22 @@ fn cs_main(in: CsInput) {
       if (center >= kernel_offset && center < cache_size - kernel_offset && all(write_index < dims)) {
         // convolution with kernel
         var acc = vec3(0.0);
+        var sum_w = 0.0;
         for (var f = 0u; f < kernel_size; f++) {
           let i = center + f - kernel_offset;
-          acc += (1.0 / f32(kernel_size)) * cache[r][i];
+          
+          // 基準テクセルからの距離
+          let distance = f32(f) - f32(kernel_offset);
+          
+          // ガウス関数による重み
+          let weight = gaussian(distance, blur_params.sigma);
+          sum_w += weight;
+
+          acc += cache[r][i] * weight;
+        }
+        
+        if sum_w != 0.0 {
+          acc /= sum_w;
         }
         
         textureStore(output_tex, write_index, vec4(acc, 1.0));
