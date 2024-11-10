@@ -63,10 +63,10 @@ struct State {
   fullscreen_quad_pipeline: wgpu::RenderPipeline,
 
   compute_constants_bind_group: wgpu::BindGroup,
-  compute_bind_group_0: wgpu::BindGroup,
-  compute_bind_group_1: wgpu::BindGroup,
-  compute_bind_group_2: wgpu::BindGroup,
-  show_result_bind_group: wgpu::BindGroup,
+  compute_bind_group_for_tex_init: wgpu::BindGroup,
+  compute_bind_group_for_swap_1: wgpu::BindGroup,
+  compute_bind_group_for_swap_2: wgpu::BindGroup,
+  render_result_bind_group: wgpu::BindGroup,
 
   blur_params_uniform_buffer: wgpu::Buffer,
   resolution_uniform_buffer: wgpu::Buffer,
@@ -202,27 +202,26 @@ impl<'a> Render<'a> for State {
     // bind group
     //
 
+    // よく使うBindingTypeを定義しておく
     let sampler_binding_type =
       wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
-
     let uniform_binding_type = wgpu::BindingType::Buffer {
       ty: wgpu::BufferBindingType::Uniform,
       has_dynamic_offset: false,
       min_binding_size: None,
     };
-
     let texture_binding_type = wgpu::BindingType::Texture {
       sample_type: wgpu::TextureSampleType::Float { filterable: true },
       view_dimension: wgpu::TextureViewDimension::D2,
       multisampled: false,
     };
-
     let texture_storage_binding_type = wgpu::BindingType::StorageTexture {
       access: wgpu::StorageTextureAccess::WriteOnly,
       format: wgpu::TextureFormat::Rgba8Unorm,
       view_dimension: wgpu::TextureViewDimension::D2,
     };
 
+    // 変更が必要ないものは1つのBindGroupにまとめる
     let compute_constants_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
       &[sampler_binding_type, uniform_binding_type],
@@ -237,6 +236,7 @@ impl<'a> Render<'a> for State {
       ],
     );
 
+    // スワップ用のBindGroupを複数用意するため、BindGroupLayoutを共通化
     let compute_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
       &[
@@ -251,7 +251,8 @@ impl<'a> Render<'a> for State {
       ],
     );
 
-    let compute_bind_group_0 = util::create_bind_group(
+    // 最初に画像テクスチャを読み込んで、Ping-Pongパターンの開始テクスチャにコピーする用
+    let compute_bind_group_for_tex_init = util::create_bind_group(
       &ctx.device,
       &compute_bind_group_layout,
       &[
@@ -265,7 +266,8 @@ impl<'a> Render<'a> for State {
       ],
     );
 
-    let compute_bind_group_1 = util::create_bind_group(
+    // Ping-Pongパターンのスワップ用
+    let compute_bind_group_for_swap_1 = util::create_bind_group(
       &ctx.device,
       &compute_bind_group_layout,
       &[
@@ -278,8 +280,7 @@ impl<'a> Render<'a> for State {
         flip_blur_dir_1_uniform_buffer.as_entire_binding(),
       ],
     );
-
-    let compute_bind_group_2 = util::create_bind_group(
+    let compute_bind_group_for_swap_2 = util::create_bind_group(
       &ctx.device,
       &compute_bind_group_layout,
       &[
@@ -293,7 +294,8 @@ impl<'a> Render<'a> for State {
       ],
     );
 
-    let show_result_bind_group_layout = util::create_bind_group_layout(
+    // 結果をスクリーンに描画するRenderPipeline用
+    let render_result_bind_group_layout = util::create_bind_group_layout(
       &ctx.device,
       &[
         sampler_binding_type,
@@ -306,13 +308,13 @@ impl<'a> Render<'a> for State {
         wgpu::ShaderStages::VERTEX,
       ],
     );
-    let show_result_bind_group = util::create_bind_group(
+    let render_result_bind_group = util::create_bind_group(
       &ctx.device,
-      &show_result_bind_group_layout,
+      &render_result_bind_group_layout,
       &[
         wgpu::BindingResource::Sampler(&sampler),
         wgpu::BindingResource::TextureView(
-          &textures[1].create_view(&wgpu::TextureViewDescriptor::default()),
+          &textures[1].create_view(&wgpu::TextureViewDescriptor::default()), // 最終結果はtextures[1]
         ),
         resolution_uniform_buffer.as_entire_binding(),
       ],
@@ -325,7 +327,7 @@ impl<'a> Render<'a> for State {
     let fullscreen_quad_pipeline_layout =
       ctx.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Fullscreen Quad Pipeline Layout"),
-        bind_group_layouts: &[&show_result_bind_group_layout],
+        bind_group_layouts: &[&render_result_bind_group_layout],
         push_constant_ranges: &[],
       });
     let fullscreen_quad_pipeline = RenderPipelineBuilder::new(&ctx)
@@ -353,10 +355,10 @@ impl<'a> Render<'a> for State {
       fullscreen_quad_pipeline,
 
       compute_constants_bind_group,
-      compute_bind_group_0,
-      compute_bind_group_1,
-      compute_bind_group_2,
-      show_result_bind_group,
+      compute_bind_group_for_tex_init,
+      compute_bind_group_for_swap_1,
+      compute_bind_group_for_swap_2,
+      render_result_bind_group,
 
       blur_params_uniform_buffer,
       resolution_uniform_buffer,
@@ -472,29 +474,30 @@ impl<'a> Render<'a> for State {
     compute_pass.set_pipeline(&self.blur_pipeline);
     compute_pass.set_bind_group(0, &self.compute_constants_bind_group, &[]);
 
-    compute_pass.set_bind_group(1, &self.compute_bind_group_0, &[]);
+    compute_pass.set_bind_group(1, &self.compute_bind_group_for_tex_init, &[]);
     compute_pass.dispatch_workgroups(
       self.image_size.0.div_ceil(self.dispatch_size),
       self.image_size.1.div_ceil(TILE_SIZE),
       1,
     );
 
-    compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
+    compute_pass.set_bind_group(1, &self.compute_bind_group_for_swap_1, &[]);
     compute_pass.dispatch_workgroups(
       self.image_size.1.div_ceil(self.dispatch_size),
       self.image_size.0.div_ceil(TILE_SIZE),
       1,
     );
 
+    // tex_initとswap_1を1回目のiterationとして扱うため、1回減らす
     for _ in 0..self.iterations - 1 {
-      compute_pass.set_bind_group(1, &self.compute_bind_group_2, &[]);
+      compute_pass.set_bind_group(1, &self.compute_bind_group_for_swap_2, &[]);
       compute_pass.dispatch_workgroups(
         self.image_size.0.div_ceil(self.dispatch_size),
         self.image_size.1.div_ceil(TILE_SIZE),
         1,
       );
 
-      compute_pass.set_bind_group(1, &self.compute_bind_group_1, &[]);
+      compute_pass.set_bind_group(1, &self.compute_bind_group_for_swap_1, &[]);
       compute_pass.dispatch_workgroups(
         self.image_size.1.div_ceil(self.dispatch_size),
         self.image_size.0.div_ceil(TILE_SIZE),
@@ -513,7 +516,7 @@ impl<'a> Render<'a> for State {
       });
 
     render_pass.set_pipeline(&self.fullscreen_quad_pipeline);
-    render_pass.set_bind_group(0, &self.show_result_bind_group, &[]);
+    render_pass.set_bind_group(0, &self.render_result_bind_group, &[]);
     render_pass.draw(0..6, 0..1);
 
     drop(render_pass);
