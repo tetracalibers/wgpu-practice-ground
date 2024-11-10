@@ -116,7 +116,7 @@ impl<'a> Render<'a> for State {
       mip_level_count: 1,
       sample_count: 1,
       dimension: wgpu::TextureDimension::D2,
-      format: wgpu::TextureFormat::Rgba8UnormSrgb,
+      format: wgpu::TextureFormat::Rgba8UnormSrgb, // 元画像の色味を保つため、ここだけsRGB
       usage: wgpu::TextureUsages::COPY_DST
         | wgpu::TextureUsages::RENDER_ATTACHMENT
         | wgpu::TextureUsages::TEXTURE_BINDING,
@@ -150,7 +150,7 @@ impl<'a> Render<'a> for State {
           mip_level_count: 1,
           sample_count: 1,
           dimension: wgpu::TextureDimension::D2,
-          format: wgpu::TextureFormat::Rgba8Unorm,
+          format: wgpu::TextureFormat::Rgba8Unorm, // ここではsRGBは指定できないので注意（STORAGE_BINDINGとの併用不可）
           usage: wgpu::TextureUsages::COPY_DST
             | wgpu::TextureUsages::STORAGE_BINDING
             | wgpu::TextureUsages::TEXTURE_BINDING,
