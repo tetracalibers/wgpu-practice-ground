@@ -137,6 +137,7 @@ impl<'a> Render<'a> for State {
       },
     );
 
+    // for Ping-Pong pattern
     let textures = (0..=1)
       .map(|_| {
         ctx.device.create_texture(&wgpu::TextureDescriptor {
