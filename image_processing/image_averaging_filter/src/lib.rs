@@ -72,11 +72,11 @@ struct State {
   resolution_uniform_buffer: wgpu::Buffer,
 
   image_size: (u32, u32),
-  kernel_size: u32,
   iterations: u32,
 
   dispatch_size: u32,
-  dispatch_size_updated: bool,
+  kernel_size: u32,
+  kernel_size_updated: bool,
 
   resolution_updated: bool,
 }
@@ -176,12 +176,10 @@ impl<'a> Render<'a> for State {
         usage: wgpu::BufferUsages::UNIFORM,
       });
 
-    let dispatch_size = calc_dispatch_size(initial.kernel_size);
-
     let blur_params_uniform_buffer =
       ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("blur params uniform buffer"),
-        contents: cast_slice(&[initial.kernel_size, dispatch_size]),
+        contents: cast_slice(&[initial.kernel_size]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
       });
 
@@ -362,10 +360,10 @@ impl<'a> Render<'a> for State {
 
       image_size: initial.image_size,
       iterations: initial.iterations,
-      kernel_size: initial.kernel_size,
 
-      dispatch_size,
-      dispatch_size_updated: false,
+      dispatch_size: calc_dispatch_size(initial.kernel_size),
+      kernel_size: initial.kernel_size,
+      kernel_size_updated: false,
 
       resolution_updated: false,
     }
@@ -392,15 +390,15 @@ impl<'a> Render<'a> for State {
         PhysicalKey::Code(KeyCode::KeyG) => {
           self.kernel_size =
             MAX_KERNEL_SIZE.min(self.kernel_size + KERNEL_SIZE_STEP);
-          println!("filter size: {}", self.kernel_size);
-          self.dispatch_size_updated = true;
+          println!("kernel size: {}", self.kernel_size);
+          self.kernel_size_updated = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyD) => {
           self.kernel_size =
             MIN_KERNEL_SIZE.max(self.kernel_size - KERNEL_SIZE_STEP);
-          println!("filter size: {}", self.kernel_size);
-          self.dispatch_size_updated = true;
+          println!("kernel size: {}", self.kernel_size);
+          self.kernel_size_updated = true;
           true
         }
         PhysicalKey::Code(KeyCode::KeyO) => {
@@ -422,14 +420,14 @@ impl<'a> Render<'a> for State {
   }
 
   fn update(&mut self, ctx: &DrawingContext, _dt: std::time::Duration) {
-    if self.dispatch_size_updated {
+    if self.kernel_size_updated {
       self.dispatch_size = calc_dispatch_size(self.kernel_size);
       ctx.queue.write_buffer(
         &self.blur_params_uniform_buffer,
         0,
-        cast_slice(&[self.kernel_size, self.dispatch_size]),
+        cast_slice(&[self.kernel_size]),
       );
-      self.dispatch_size_updated = false;
+      self.kernel_size_updated = false;
     }
 
     if self.resolution_updated {
