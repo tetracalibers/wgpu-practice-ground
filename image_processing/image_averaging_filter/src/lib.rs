@@ -387,14 +387,14 @@ impl<'a> Render<'a> for State {
           },
         ..
       } => match physical_key {
-        PhysicalKey::Code(KeyCode::KeyG) => {
+        PhysicalKey::Code(KeyCode::KeyL) => {
           self.kernel_size =
             MAX_KERNEL_SIZE.min(self.kernel_size + KERNEL_SIZE_STEP);
           println!("kernel size: {}", self.kernel_size);
           self.kernel_size_updated = true;
           true
         }
-        PhysicalKey::Code(KeyCode::KeyD) => {
+        PhysicalKey::Code(KeyCode::KeyJ) => {
           self.kernel_size =
             MIN_KERNEL_SIZE.max(self.kernel_size - KERNEL_SIZE_STEP);
           println!("kernel size: {}", self.kernel_size);
